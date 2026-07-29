@@ -24,6 +24,10 @@ obj/
 appsettings.*.local.json
 appsettings.*.Development.json
 **/appsettings.Development.json
+**/appsettings.json                    
+**/appsettings.Production.json          
+!**/appsettings.template.json           # (keeps template files)
+
 
 ## Environment files
 .env
