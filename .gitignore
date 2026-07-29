@@ -1,0 +1,54 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+## Visual Studio
+.vs/
+.vscode/
+*.swp
+*.*~
+
+## Rider
+.idea/
+
+## EF Core Migrations (optional – usually you keep these)
+# Uncomment the line below if you DON'T want to commit migrations
+# src/ClinicManagementSystem.Infrastructure/Persistence/Migrations/
+
+## Sensitive Config Files
+appsettings.*.local.json
+appsettings.*.Development.json
+**/appsettings.Development.json
+
+## Environment files
+.env
+*.env
+
+## OS files
+.DS_Store
+Thumbs.db
+
+## Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa]rm/
+[Aa]rm64/
+
+## NuGet
+*.nupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+
+## Test Results
+TestResults/
+*.trx
+*.coverage
