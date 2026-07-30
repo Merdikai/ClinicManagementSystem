@@ -1,6 +1,5 @@
-@ClinicManagementSystem.API_HostAddress = http://localhost:5041
+@ClinicManagementSystem_API_HostAddress = http://localhost:5041
 
-GET {{ClinicManagementSystem.API_HostAddress}}/weatherforecast/
+GET {{ClinicManagementSystem_API_HostAddress}}/weatherforecast/
 Accept: application/json
 
-###
