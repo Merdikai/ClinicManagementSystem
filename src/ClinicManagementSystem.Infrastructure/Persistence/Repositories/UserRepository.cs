@@ -18,10 +18,16 @@ public class UserRepository : IUserRepository
         => await _context.Users.FindAsync(id);
 
     public async Task<User?> GetByUsernameAsync(string username)
-        => await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
+        => await _context.Users
+            .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+            .FirstOrDefaultAsync(u => u.Username == username);
 
     public async Task<User?> GetByEmailAsync(string email)
-        => await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+        => await _context.Users
+            .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+            .FirstOrDefaultAsync(u => u.Email == email);
 
     public async Task<IEnumerable<User>> GetAllAsync()
         => await _context.Users.ToListAsync();
@@ -34,4 +40,8 @@ public class UserRepository : IUserRepository
 
     public void Delete(User user)
         => _context.Users.Remove(user);
+
+    // ✅ ADD THIS METHOD
+    public async Task SaveChangesAsync()
+        => await _context.SaveChangesAsync();
 }

@@ -1,11 +1,13 @@
 using ClinicManagementSystem.Application.DTOs;
 using ClinicManagementSystem.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace ClinicManagementSystem.API.Controllers;
 
 [ApiController]
 [Route("api/v1/billing")]
+[Authorize(Roles = "Admin,Accountant")]
 public class BillingController : ControllerBase
 {
     private readonly IBillingService _billingService;

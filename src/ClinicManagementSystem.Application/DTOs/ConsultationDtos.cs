@@ -7,16 +7,17 @@ public record CreateConsultationDto(
     string ClinicalNotes
 );
 
-public record ConsultationResponseDto(
-    Guid Id,
-    Guid AppointmentId,
-    string DoctorName,
-    string Symptoms,
-    string Diagnosis,
-    string ClinicalNotes,
-    DateTime ConsultedAt,
-    PrescriptionResponseDto? Prescription
-);
+public class ConsultationResponseDto
+{
+    public Guid Id { get; set; }
+    public Guid AppointmentId { get; set; }
+    public string DoctorName { get; set; } = string.Empty;
+    public string Symptoms { get; set; } = string.Empty;
+    public string Diagnosis { get; set; } = string.Empty;
+    public string ClinicalNotes { get; set; } = string.Empty;
+    public DateTime ConsultedAt { get; set; }
+    public PrescriptionResponseDto? Prescription { get; set; }
+}
 
 public record CreatePrescriptionDto(
     Guid ConsultationId,
@@ -30,17 +31,19 @@ public record CreatePrescriptionItemDto(
     string DosageInstructions
 );
 
-public record PrescriptionResponseDto(
-    Guid Id,
-    DateTime IssuedAt,
-    string Notes,
-    List<PrescriptionItemResponseDto> Items
-);
+public class PrescriptionResponseDto
+{
+    public Guid Id { get; set; }
+    public DateTime IssuedAt { get; set; }
+    public string Notes { get; set; } = string.Empty;
+    public List<PrescriptionItemResponseDto> Items { get; set; } = new();
+}
 
-public record PrescriptionItemResponseDto(
-    string MedicineName,
-    int Quantity,
-    string DosageInstructions,
-    decimal UnitPrice,
-    decimal TotalPrice
-);
+public class PrescriptionItemResponseDto
+{
+    public string MedicineName { get; set; } = string.Empty;
+    public int Quantity { get; set; }
+    public string DosageInstructions { get; set; } = string.Empty;
+    public decimal UnitPrice { get; set; }
+    public decimal TotalPrice { get; set; }
+}

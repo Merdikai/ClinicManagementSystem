@@ -1,11 +1,14 @@
 using ClinicManagementSystem.Application.DTOs;
 using ClinicManagementSystem.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 
 namespace ClinicManagementSystem.API.Controllers;
 
 [ApiController]
 [Route("api/v1/consultations")]
+[Authorize(Roles = "Doctor")]
 public class ConsultationsController : ControllerBase
 {
     private readonly IConsultationService _consultationService;
@@ -16,11 +19,11 @@ public class ConsultationsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateConsultationDto dto)
-    {
-        // TODO: Get doctor ID from JWT token after auth is implemented
-        var doctorId = Guid.NewGuid(); // Placeholder
-        var consultation = await _consultationService.CreateAsync(dto, doctorId);
-        return CreatedAtAction(nameof(Create), new { id = consultation.Id }, consultation);
-    }
+public async Task<IActionResult> Create([FromBody] CreateConsultationDto dto)
+{
+    var doctorId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+    var consultation = await _consultationService.CreateAsync(dto, doctorId);
+    return CreatedAtAction(nameof(Create), new { id = consultation.Id }, consultation);
+}
+
 }

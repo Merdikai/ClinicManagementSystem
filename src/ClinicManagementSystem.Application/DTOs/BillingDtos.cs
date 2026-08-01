@@ -14,27 +14,29 @@ public record CreateInvoiceItemDto(
     decimal UnitPrice
 );
 
-public record InvoiceResponseDto(
-    Guid Id,
-    string InvoiceNumber,
-    string PatientName,
-    DateTime IssueDate,
-    DateTime DueDate,
-    string Status,
-    decimal SubTotal,
-    decimal TaxAmount,
-    decimal DiscountAmount,
-    decimal TotalAmount,
-    decimal BalanceDue,
-    List<InvoiceItemResponseDto> LineItems
-);
+public class InvoiceResponseDto
+{
+    public Guid Id { get; set; }
+    public string InvoiceNumber { get; set; } = string.Empty;
+    public string PatientName { get; set; } = string.Empty;
+    public DateTime IssueDate { get; set; }
+    public DateTime DueDate { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public decimal SubTotal { get; set; }
+    public decimal TaxAmount { get; set; }
+    public decimal DiscountAmount { get; set; }
+    public decimal TotalAmount { get; set; }
+    public decimal BalanceDue { get; set; }
+    public List<InvoiceItemResponseDto> LineItems { get; set; } = new();
+}
 
-public record InvoiceItemResponseDto(
-    string Description,
-    int Quantity,
-    decimal UnitPrice,
-    decimal LineTotal
-);
+public class InvoiceItemResponseDto
+{
+    public string Description { get; set; } = string.Empty;
+    public int Quantity { get; set; }
+    public decimal UnitPrice { get; set; }
+    public decimal LineTotal { get; set; }
+}
 
 public record ProcessPaymentDto(
     Guid InvoiceId,
@@ -43,9 +45,10 @@ public record ProcessPaymentDto(
     string TransactionReference
 );
 
-public record PaymentResponseDto(
-    Guid Id,
-    decimal AmountPaid,
-    string PaymentMethod,
-    DateTime PaymentDate
-);
+public class PaymentResponseDto
+{
+    public Guid Id { get; set; }
+    public decimal AmountPaid { get; set; }
+    public string PaymentMethod { get; set; } = string.Empty;
+    public DateTime PaymentDate { get; set; }
+}

@@ -1,4 +1,6 @@
+using ClinicManagementSystem.Application.Interfaces;
 using ClinicManagementSystem.Domain.Interfaces;
+using ClinicManagementSystem.Infrastructure.Identity;
 using ClinicManagementSystem.Infrastructure.Persistence.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -19,6 +21,10 @@ public static class DependencyInjection
         services.AddScoped<IMedicineRepository, MedicineRepository>();
         services.AddScoped<IInvoiceRepository, InvoiceRepository>();
         services.AddScoped<IPaymentRepository, PaymentRepository>();
+
+        // Identity Services (register as their interfaces)
+        services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+        services.AddScoped<IPasswordHasher, PasswordHasher>();
 
         return services;
     }

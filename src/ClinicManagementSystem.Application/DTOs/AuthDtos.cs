@@ -1,6 +1,5 @@
 namespace ClinicManagementSystem.Application.DTOs;
 
-// Request
 public record RegisterUserDto(
     string Username,
     string Email,
@@ -15,10 +14,10 @@ public record LoginDto(
     string Password
 );
 
-// Response
-public record AuthResponseDto(
-    string Token,
-    string Username,
-    string FullName,
-    IList<string> Roles
-);
+public class AuthResponseDto
+{
+    public string Token { get; set; } = string.Empty;
+    public string Username { get; set; } = string.Empty;
+    public string FullName { get; set; } = string.Empty;
+    public IList<string> Roles { get; set; } = new List<string>();
+}

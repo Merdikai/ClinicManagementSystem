@@ -11,4 +11,5 @@ public interface IUserRepository
     Task AddAsync(User user);
     void Update(User user);
     void Delete(User user);
+    Task SaveChangesAsync();  // ← ADD THIS LINE
 }

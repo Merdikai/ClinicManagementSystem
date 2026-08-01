@@ -1,11 +1,13 @@
 using ClinicManagementSystem.Application.DTOs;
 using ClinicManagementSystem.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace ClinicManagementSystem.API.Controllers;
 
 [ApiController]
 [Route("api/v1/medicines")]
+[Authorize(Roles = "Admin,Pharmacist")]
 public class MedicinesController : ControllerBase
 {
     private readonly IMedicineService _medicineService;
@@ -35,4 +37,6 @@ public class MedicinesController : ControllerBase
         await _medicineService.DispenseAsync(id, quantity);
         return NoContent();
     }
+
+    
 }
