@@ -24,6 +24,7 @@ public class PatientService : IPatientService
         patient.MedicalRecordNumber = GenerateMRN();
 
         await _patientRepository.AddAsync(patient);
+        await _patientRepository.SaveChangesAsync();
         return _mapper.Map<PatientResponseDto>(patient);
     }
 

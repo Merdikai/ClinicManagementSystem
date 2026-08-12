@@ -1,3 +1,4 @@
+using AutoMapper;
 using ClinicManagementSystem.Application.DTOs;
 using ClinicManagementSystem.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -9,10 +10,12 @@ namespace ClinicManagementSystem.API.Controllers;
 public class PatientsController : ControllerBase
 {
     private readonly IPatientService _patientService;
+    private readonly IMapper _mapper;
 
-    public PatientsController(IPatientService patientService)
+    public PatientsController(IPatientService patientService, IMapper mapper)
     {
         _patientService = patientService;
+        _mapper = mapper;
     }
 
     [HttpPost]

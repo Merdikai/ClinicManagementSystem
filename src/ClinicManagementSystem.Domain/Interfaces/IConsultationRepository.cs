@@ -8,4 +8,5 @@ public interface IConsultationRepository
     Task<Consultation?> GetByAppointmentIdAsync(Guid appointmentId);
     Task AddAsync(Consultation consultation);
     void Update(Consultation consultation);
+    Task SaveChangesAsync();
 }

@@ -9,4 +9,5 @@ public interface IMedicineRepository
     Task<(IEnumerable<Medicine> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, string? search);
     Task AddAsync(Medicine medicine);
     void Update(Medicine medicine);
+    Task SaveChangesAsync();
 }

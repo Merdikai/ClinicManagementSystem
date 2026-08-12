@@ -22,6 +22,7 @@ public class MedicineService : IMedicineService
     {
         var medicine = _mapper.Map<Medicine>(dto);
         await _medicineRepository.AddAsync(medicine);
+        await _medicineRepository.SaveChangesAsync();
         return _mapper.Map<MedicineResponseDto>(medicine);
     }
 
@@ -49,5 +50,6 @@ public class MedicineService : IMedicineService
 
         medicine.StockQuantity -= quantity;
         _medicineRepository.Update(medicine);
+        await _medicineRepository.SaveChangesAsync();
     }
 }

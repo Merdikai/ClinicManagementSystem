@@ -6,4 +6,5 @@ public interface IVitalSignRepository
 {
     Task<VitalSign?> GetByAppointmentIdAsync(Guid appointmentId);
     Task AddAsync(VitalSign vitalSign);
+    Task SaveChangesAsync();
 }

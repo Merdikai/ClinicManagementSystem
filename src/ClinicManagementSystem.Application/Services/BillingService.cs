@@ -48,6 +48,7 @@ public class BillingService : IBillingService
         invoice.TotalAmount = invoice.SubTotal + invoice.TaxAmount - invoice.DiscountAmount;
 
         await _invoiceRepository.AddAsync(invoice);
+        await _invoiceRepository.SaveChangesAsync();
         return _mapper.Map<InvoiceResponseDto>(invoice);
     }
 
@@ -87,6 +88,8 @@ public class BillingService : IBillingService
             invoice.Status = InvoiceStatus.PartiallyPaid;
 
         _invoiceRepository.Update(invoice);
+        await _paymentRepository.SaveChangesAsync();
+        await _invoiceRepository.SaveChangesAsync();
 
         return _mapper.Map<PaymentResponseDto>(payment);
     }

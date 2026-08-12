@@ -46,4 +46,7 @@ public class MedicineRepository : IMedicineRepository
 
     public void Update(Medicine medicine)
         => _context.Medicines.Update(medicine);
+
+    public async Task SaveChangesAsync()
+        => await _context.SaveChangesAsync();
 }

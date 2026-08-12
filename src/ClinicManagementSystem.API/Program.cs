@@ -116,6 +116,8 @@ app.UseMiddleware<ExceptionMiddleware>();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapGet("/", () => Results.Ok("Clinic Management API is running"));
 app.MapControllers();
 
 app.Run();

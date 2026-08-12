@@ -1,8 +1,9 @@
+using AutoMapper;
 using ClinicManagementSystem.Application.DTOs;
 using ClinicManagementSystem.Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-using Microsoft.AspNetCore.Authorization;
 
 namespace ClinicManagementSystem.API.Controllers;
 
@@ -12,18 +13,20 @@ namespace ClinicManagementSystem.API.Controllers;
 public class ConsultationsController : ControllerBase
 {
     private readonly IConsultationService _consultationService;
+    private readonly IMapper _mapper;
 
-    public ConsultationsController(IConsultationService consultationService)
+    public ConsultationsController(IConsultationService consultationService, IMapper mapper)
     {
         _consultationService = consultationService;
+        _mapper = mapper;
     }
 
     [HttpPost]
-public async Task<IActionResult> Create([FromBody] CreateConsultationDto dto)
-{
-    var doctorId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-    var consultation = await _consultationService.CreateAsync(dto, doctorId);
-    return CreatedAtAction(nameof(Create), new { id = consultation.Id }, consultation);
-}
+    public async Task<IActionResult> Create([FromBody] CreateConsultationDto dto)
+    {
+        var doctorId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        var consultation = await _consultationService.CreateAsync(dto, doctorId);
+        return Created(string.Empty, consultation);
+    }
 
 }

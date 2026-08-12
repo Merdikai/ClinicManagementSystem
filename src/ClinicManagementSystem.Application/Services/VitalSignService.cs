@@ -33,6 +33,7 @@ public class VitalSignService : IVitalSignService
         vitalSign.RecordedByNurseId = nurseId;
 
         await _vitalSignRepository.AddAsync(vitalSign);
+        await _vitalSignRepository.SaveChangesAsync();
         return _mapper.Map<VitalSignResponseDto>(vitalSign);
     }
 }

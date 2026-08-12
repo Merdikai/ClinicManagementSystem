@@ -33,6 +33,7 @@ public class ConsultationService : IConsultationService
         consultation.DoctorId = doctorId;
 
         await _consultationRepository.AddAsync(consultation);
+        await _consultationRepository.SaveChangesAsync();
         return _mapper.Map<ConsultationResponseDto>(consultation);
     }
 }

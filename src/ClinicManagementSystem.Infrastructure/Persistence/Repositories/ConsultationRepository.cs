@@ -30,4 +30,7 @@ public class ConsultationRepository : IConsultationRepository
 
     public void Update(Consultation consultation)
         => _context.Consultations.Update(consultation);
+
+    public async Task SaveChangesAsync()
+        => await _context.SaveChangesAsync();
 }

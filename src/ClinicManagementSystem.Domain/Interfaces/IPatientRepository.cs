@@ -10,4 +10,5 @@ public interface IPatientRepository
     Task<(IEnumerable<Patient> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, string? search);
     Task AddAsync(Patient patient);
     void Update(Patient patient);
+    Task SaveChangesAsync();
 }

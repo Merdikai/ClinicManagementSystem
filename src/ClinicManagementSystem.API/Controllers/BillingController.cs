@@ -1,7 +1,8 @@
+using AutoMapper;
 using ClinicManagementSystem.Application.DTOs;
 using ClinicManagementSystem.Application.Interfaces;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ClinicManagementSystem.API.Controllers;
 
@@ -11,10 +12,12 @@ namespace ClinicManagementSystem.API.Controllers;
 public class BillingController : ControllerBase
 {
     private readonly IBillingService _billingService;
+    private readonly IMapper _mapper;
 
-    public BillingController(IBillingService billingService)
+    public BillingController(IBillingService billingService, IMapper mapper)
     {
         _billingService = billingService;
+        _mapper = mapper;
     }
 
     [HttpPost("invoices")]

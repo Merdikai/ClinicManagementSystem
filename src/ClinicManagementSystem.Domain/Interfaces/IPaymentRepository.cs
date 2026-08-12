@@ -5,4 +5,5 @@ namespace ClinicManagementSystem.Domain.Interfaces;
 public interface IPaymentRepository
 {
     Task AddAsync(Payment payment);
+    Task SaveChangesAsync();
 }

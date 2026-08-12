@@ -8,4 +8,5 @@ public interface IInvoiceRepository
     Task<IEnumerable<Invoice>> GetByPatientIdAsync(Guid patientId);
     Task AddAsync(Invoice invoice);
     void Update(Invoice invoice);
+    Task SaveChangesAsync();
 }

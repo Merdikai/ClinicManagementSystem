@@ -50,4 +50,7 @@ public class PatientRepository : IPatientRepository
 
     public void Update(Patient patient)
         => _context.Patients.Update(patient);
+
+    public async Task SaveChangesAsync()
+        => await _context.SaveChangesAsync();
 }

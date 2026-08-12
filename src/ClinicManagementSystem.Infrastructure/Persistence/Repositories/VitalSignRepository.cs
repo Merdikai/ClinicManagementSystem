@@ -20,4 +20,7 @@ public class VitalSignRepository : IVitalSignRepository
 
     public async Task AddAsync(VitalSign vitalSign)
         => await _context.VitalSigns.AddAsync(vitalSign);
+
+    public async Task SaveChangesAsync()
+        => await _context.SaveChangesAsync();
 }

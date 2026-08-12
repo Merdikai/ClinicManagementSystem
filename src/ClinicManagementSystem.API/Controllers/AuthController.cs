@@ -1,5 +1,6 @@
+using AutoMapper;
 using ClinicManagementSystem.Application.DTOs;
-using ClinicManagementSystem.Application.Interfaces;   // ← IAuthService is here
+using ClinicManagementSystem.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ClinicManagementSystem.API.Controllers;
@@ -9,10 +10,12 @@ namespace ClinicManagementSystem.API.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
+    private readonly IMapper _mapper;
 
-    public AuthController(IAuthService authService)
+    public AuthController(IAuthService authService, IMapper mapper)
     {
         _authService = authService;
+        _mapper = mapper;
     }
 
     [HttpPost("register")]

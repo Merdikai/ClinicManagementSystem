@@ -33,6 +33,7 @@ public class AppointmentService : IAppointmentService
         appointment.Status = AppointmentStatus.Scheduled;
 
         await _appointmentRepository.AddAsync(appointment);
+        await _appointmentRepository.SaveChangesAsync();
         return _mapper.Map<AppointmentResponseDto>(appointment);
     }
 
@@ -58,6 +59,7 @@ public class AppointmentService : IAppointmentService
 
         appointment.Status = AppointmentStatus.CheckedIn;
         _appointmentRepository.Update(appointment);
+        await _appointmentRepository.SaveChangesAsync();
     }
 
     public async Task CancelAsync(Guid appointmentId)
@@ -67,5 +69,6 @@ public class AppointmentService : IAppointmentService
 
         appointment.Status = AppointmentStatus.Cancelled;
         _appointmentRepository.Update(appointment);
+        await _appointmentRepository.SaveChangesAsync();
     }
 }

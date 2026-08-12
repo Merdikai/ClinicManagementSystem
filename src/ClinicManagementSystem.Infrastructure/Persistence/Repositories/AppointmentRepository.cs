@@ -58,4 +58,7 @@ public class AppointmentRepository : IAppointmentRepository
 
     public void Update(Appointment appointment)
         => _context.Appointments.Update(appointment);
+
+    public async Task SaveChangesAsync()
+        => await _context.SaveChangesAsync();
 }

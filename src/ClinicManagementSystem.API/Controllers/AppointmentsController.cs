@@ -1,3 +1,4 @@
+using AutoMapper;
 using ClinicManagementSystem.Application.DTOs;
 using ClinicManagementSystem.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -9,10 +10,12 @@ namespace ClinicManagementSystem.API.Controllers;
 public class AppointmentsController : ControllerBase
 {
     private readonly IAppointmentService _appointmentService;
+    private readonly IMapper _mapper;
 
-    public AppointmentsController(IAppointmentService appointmentService)
+    public AppointmentsController(IAppointmentService appointmentService, IMapper mapper)
     {
         _appointmentService = appointmentService;
+        _mapper = mapper;
     }
 
     [HttpPost]
@@ -26,7 +29,7 @@ public class AppointmentsController : ControllerBase
     public async Task<IActionResult> GetById(Guid id)
     {
         var appointment = await _appointmentService.GetByIdAsync(id);
-        return Ok(appointment);
+        return appointment is null ? NotFound() : Ok(appointment);
     }
 
     [HttpGet("doctor/{doctorId:guid}")]
