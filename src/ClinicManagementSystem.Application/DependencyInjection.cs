@@ -1,5 +1,3 @@
-using ClinicManagementSystem.Application.Interfaces;
-using ClinicManagementSystem.Application.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ClinicManagementSystem.Application;
@@ -11,15 +9,8 @@ public static class DependencyInjection
         // AutoMapper
         services.AddAutoMapper(typeof(DependencyInjection).Assembly);
 
-        // Services
-        services.AddScoped<IPatientService, PatientService>();
-        services.AddScoped<IAppointmentService, AppointmentService>();
-        services.AddScoped<IVitalSignService, VitalSignService>();
-        services.AddScoped<IConsultationService, ConsultationService>();
-        services.AddScoped<IMedicineService, MedicineService>();
-        services.AddScoped<IBillingService, BillingService>();
-        services.AddScoped<IAuthService, AuthService>();
-        
+        // MediatR — registers all handlers from this assembly
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly));
 
         return services;
     }

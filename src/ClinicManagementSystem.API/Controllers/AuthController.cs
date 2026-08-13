@@ -1,6 +1,7 @@
 using AutoMapper;
+using ClinicManagementSystem.Application.Auth.Commands;
 using ClinicManagementSystem.Application.DTOs;
-using ClinicManagementSystem.Application.Interfaces;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ClinicManagementSystem.API.Controllers;
@@ -9,26 +10,27 @@ namespace ClinicManagementSystem.API.Controllers;
 [Route("api/v1/auth")]
 public class AuthController : ControllerBase
 {
-    private readonly IAuthService _authService;
+    private readonly ISender _sender;
     private readonly IMapper _mapper;
 
-    public AuthController(IAuthService authService, IMapper mapper)
+    public AuthController(ISender sender, IMapper mapper)
     {
-        _authService = authService;
+        _sender = sender;
         _mapper = mapper;
     }
 
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterUserDto dto)
     {
-        var result = await _authService.RegisterAsync(dto);
+        var command = new RegisterUserCommand(dto.Username, dto.Email, dto.Password, dto.FirstName, dto.LastName, dto.PhoneNumber);
+        var result = await _sender.Send(command);
         return Ok(result);
     }
 
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginDto dto)
     {
-        var result = await _authService.LoginAsync(dto);
+        var result = await _sender.Send(new LoginCommand(dto.Username, dto.Password));
         return Ok(result);
     }
 }
