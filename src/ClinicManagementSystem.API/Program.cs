@@ -98,7 +98,11 @@ using (var scope = app.Services.CreateScope())
     await DbInitializer.SeedAsync(context);
 }
 
+
 // ─── Middleware Pipeline ───
+app.UseMiddleware<RequestLoggingMiddleware>();   // ← First: log everything
+app.UseMiddleware<ExceptionMiddleware>();        // ← Second: catch exceptions
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
