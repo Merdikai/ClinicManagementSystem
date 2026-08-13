@@ -11,3 +11,5 @@
    "ConnectionStrings": {
      "DefaultConnection": "Host=localhost;Port=5432;Database=ClinicManagementDb;Username=YOUR_USERNAME;Password=YOUR_PASSWORD"
    }
+
+   hello
