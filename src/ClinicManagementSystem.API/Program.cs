@@ -3,6 +3,7 @@ using ClinicManagementSystem.Infrastructure;
 using ClinicManagementSystem.Infrastructure.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using ClinicManagementSystem.API.Middlewares;
+using ClinicManagementSystem.API.Filters;
 using ClinicManagementSystem.Infrastructure.SeedData;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -55,7 +56,10 @@ builder.Services.AddScoped<PasswordHasher>();
 // ─── Database ... (already exists)
 
 // ─── Controllers & Swagger ───
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<ValidationFilter>();
+});
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
