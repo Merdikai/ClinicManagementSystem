@@ -16,12 +16,14 @@ public class CreateAppointmentCommandHandler : IRequestHandler<CreateAppointment
     private readonly IAppointmentRepository _appointmentRepository;
     private readonly IMapper _mapper;
     private readonly ILinkGeneratorService _linkGenerator;
+    private readonly INotificationService _notificationService;
 
-    public CreateAppointmentCommandHandler(IAppointmentRepository appointmentRepository, IMapper mapper, ILinkGeneratorService linkGenerator)
+    public CreateAppointmentCommandHandler(IAppointmentRepository appointmentRepository, IMapper mapper, ILinkGeneratorService linkGenerator, INotificationService notificationService)
     {
         _appointmentRepository = appointmentRepository;
         _mapper = mapper;
         _linkGenerator = linkGenerator;
+        _notificationService = notificationService;
     }
 
     public async Task<Result<AppointmentResponseDto>> Handle(CreateAppointmentCommand request, CancellationToken cancellationToken)
@@ -38,6 +40,14 @@ public class CreateAppointmentCommandHandler : IRequestHandler<CreateAppointment
 
         await _appointmentRepository.AddAsync(appointment);
         await _appointmentRepository.SaveChangesAsync();
+
+        // Notify doctor about new appointment
+        await _notificationService.NotifyAppointmentBookedAsync(
+            request.DoctorId,
+            appointment.Id,
+            appointment.Patient != null ? $"{appointment.Patient.FirstName} {appointment.Patient.LastName}" : "Unknown Patient"
+        );
+
         var responseDto = _mapper.Map<AppointmentResponseDto>(appointment);
         responseDto.Links = _linkGenerator.GenerateAppointmentLinks(appointment);
         return Result<AppointmentResponseDto>.Success(responseDto);

@@ -4,14 +4,20 @@ using ClinicManagementSystem.Domain.Enums;
 using ClinicManagementSystem.Domain.Interfaces;
 using MediatR;
 
+using ClinicManagementSystem.Application.Interfaces;
+
 namespace ClinicManagementSystem.Application.Appointments.Commands;
 
 public class CheckInAppointmentCommandHandler : IRequestHandler<CheckInAppointmentCommand>
 {
     private readonly IAppointmentRepository _appointmentRepository;
+    private readonly INotificationService _notificationService;
 
-    public CheckInAppointmentCommandHandler(IAppointmentRepository appointmentRepository)
-        => _appointmentRepository = appointmentRepository;
+    public CheckInAppointmentCommandHandler(IAppointmentRepository appointmentRepository, INotificationService notificationService)
+    {
+        _appointmentRepository = appointmentRepository;
+        _notificationService = notificationService;
+    }
 
     public async Task Handle(CheckInAppointmentCommand request, CancellationToken cancellationToken)
     {
@@ -24,5 +30,12 @@ public class CheckInAppointmentCommandHandler : IRequestHandler<CheckInAppointme
         appointment.Status = AppointmentStatus.CheckedIn;
         _appointmentRepository.Update(appointment);
         await _appointmentRepository.SaveChangesAsync();
+
+        // Notify doctor that patient is ready
+        await _notificationService.NotifyPatientCheckedInAsync(
+            appointment.DoctorId,
+            appointment.Id,
+            appointment.Patient != null ? $"{appointment.Patient.FirstName} {appointment.Patient.LastName}" : "Unknown Patient"
+        );
     }
 }

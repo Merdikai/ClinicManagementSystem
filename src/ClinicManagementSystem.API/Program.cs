@@ -18,6 +18,8 @@ using Hangfire;
 using Hangfire.PostgreSql;
 using MediatR;
 using ClinicManagementSystem.Application.Reports.Queries;
+using ClinicManagementSystem.API.Hubs;
+using ClinicManagementSystem.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -106,6 +108,10 @@ builder.Services.AddCustomRateLimiting();
 builder.Services.AddHangfire(config =>
     config.UsePostgreSqlStorage(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddHangfireServer();
+
+// ─── SignalR & Notifications ───
+builder.Services.AddSignalR();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 // ─── HybridCache ───
 #pragma warning disable EXTEXP0018
@@ -228,6 +234,7 @@ app.UseHangfireDashboard("/hangfire");
 app.MapHealthChecks("/health");
 app.MapGet("/", () => Results.Ok("Clinic Management API is running"));
 app.MapControllers();
+app.MapHub<ClinicHub>("/hubs/clinic");
 
 using (var scope = app.Services.CreateScope())
 {
