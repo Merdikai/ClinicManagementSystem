@@ -26,6 +26,9 @@ public class PatientsController : ControllerBase
     }
 
     [HttpPost]
+    [EndpointSummary("Create a new patient")]
+    [ProducesResponseType(typeof(PatientResponseDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] CreatePatientDto dto)
     {
         var command = new CreatePatientCommand(dto.FirstName, dto.LastName, dto.DateOfBirth,
@@ -35,6 +38,9 @@ public class PatientsController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
+    [EndpointSummary("Get a patient by ID")]
+    [ProducesResponseType(typeof(PatientResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid id)
     {
         var patient = await _sender.Send(new GetPatientByIdQuery(id));
@@ -42,6 +48,8 @@ public class PatientsController : ControllerBase
     }
 
     [HttpGet]
+    [EndpointSummary("Get paginated patients list")]
+    [ProducesResponseType(typeof(PagedResponse<PatientResponseDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 10, [FromQuery] string? search = null, [FromQuery] string? sortBy = null, [FromQuery] bool descending = false)
     {
         var patients = await _sender.Send(new GetPatientsPagedQuery(page, pageSize, search, sortBy, descending));

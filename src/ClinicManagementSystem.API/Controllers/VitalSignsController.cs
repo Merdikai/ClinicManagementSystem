@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using AutoMapper;
 using ClinicManagementSystem.Application.DTOs;
 using ClinicManagementSystem.Application.VitalSigns.Commands;
@@ -11,7 +12,8 @@ using Microsoft.AspNetCore.RateLimiting;
 namespace ClinicManagementSystem.API.Controllers;
 
 [ApiController]
-[Route("api/v1/vitals")]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/vitals")]
 [Authorize(Roles = "Nurse")]
 [EnableRateLimiting(RateLimitingConstants.StaffPolicy)]
 public class VitalSignsController : ControllerBase
@@ -26,6 +28,9 @@ public class VitalSignsController : ControllerBase
     }
 
     [HttpPost]
+    [EndpointSummary("Record vital signs")]
+    [ProducesResponseType(typeof(VitalSignResponseDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Record([FromBody] RecordVitalsDto dto)
     {
         var nurseId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);

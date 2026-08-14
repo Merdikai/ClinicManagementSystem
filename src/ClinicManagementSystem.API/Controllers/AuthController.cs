@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using AutoMapper;
 using ClinicManagementSystem.Application.Auth.Commands;
 using ClinicManagementSystem.Application.DTOs;
@@ -9,7 +10,8 @@ using Microsoft.AspNetCore.RateLimiting;
 namespace ClinicManagementSystem.API.Controllers;
 
 [ApiController]
-[Route("api/v1/auth")]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/auth")]
 [EnableRateLimiting(RateLimitingConstants.AnonymousPolicy)]
 public class AuthController : ControllerBase
 {
@@ -23,6 +25,9 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("register")]
+    [EndpointSummary("Register a new user")]
+    [ProducesResponseType(typeof(UserResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Register([FromBody] RegisterUserDto dto)
     {
         var command = new RegisterUserCommand(dto.Username, dto.Email, dto.Password, dto.FirstName, dto.LastName, dto.PhoneNumber);
@@ -31,6 +36,9 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
+    [EndpointSummary("Authenticate user and get JWT")]
+    [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login([FromBody] LoginDto dto)
     {
         var result = await _sender.Send(new LoginCommand(dto.Username, dto.Password));

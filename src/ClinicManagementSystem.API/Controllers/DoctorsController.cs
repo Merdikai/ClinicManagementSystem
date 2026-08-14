@@ -1,4 +1,5 @@
 using ClinicManagementSystem.Application.Doctors.Queries;
+using ClinicManagementSystem.Application.DTOs;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,6 +22,8 @@ public class DoctorsController : ControllerBase
     }
 
     [HttpGet]
+    [EndpointSummary("Get all doctors")]
+    [ProducesResponseType(typeof(IEnumerable<UserResponseDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAllDoctors()
     {
         var query = new GetDoctorsQuery();

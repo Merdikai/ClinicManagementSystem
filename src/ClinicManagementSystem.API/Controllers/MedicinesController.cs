@@ -28,6 +28,9 @@ public class MedicinesController : ControllerBase
     }
 
     [HttpPost]
+    [EndpointSummary("Create a new medicine")]
+    [ProducesResponseType(typeof(MedicineResponseDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] CreateMedicineDto dto)
     {
         var command = new CreateMedicineCommand(dto.Code, dto.Name, dto.Category, dto.StockQuantity, dto.UnitPrice);
@@ -36,6 +39,8 @@ public class MedicinesController : ControllerBase
     }
 
     [HttpGet]
+    [EndpointSummary("Get paginated list of medicines")]
+    [ProducesResponseType(typeof(PagedResponse<MedicineResponseDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 10, [FromQuery] string? search = null, [FromQuery] string? sortBy = null, [FromQuery] bool descending = false)
     {
         var medicines = await _sender.Send(new GetMedicinesPagedQuery(page, pageSize, search, sortBy, descending));
@@ -43,6 +48,10 @@ public class MedicinesController : ControllerBase
     }
 
     [HttpPatch("{id:guid}/dispense")]
+    [EndpointSummary("Dispense medicine stock")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Dispense(Guid id, [FromBody] int quantity)
     {
         await _sender.Send(new DispenseMedicineCommand(id, quantity));
