@@ -28,7 +28,7 @@ public class GetMedicinesPagedQueryHandler : IRequestHandler<GetMedicinesPagedQu
     {
         if (request.Page == 1 && request.PageSize <= 20 && string.IsNullOrEmpty(request.Search) && string.IsNullOrEmpty(request.SortBy))
         {
-            var cacheKey = $"medicines:page{request.Page}:size{request.PageSize}";
+            var cacheKey = $"medicines_v1:page{request.Page}:size{request.PageSize}";
             var cacheHit = true;
 
             var cached = await _cache.GetOrCreateAsync(

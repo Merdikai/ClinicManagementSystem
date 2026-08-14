@@ -28,7 +28,7 @@ public class GetPatientByIdQueryHandler : IRequestHandler<GetPatientByIdQuery, P
 
     public async Task<PatientResponseDto> Handle(GetPatientByIdQuery request, CancellationToken cancellationToken)
     {
-        var cacheKey = $"patient:{request.Id}";
+        var cacheKey = $"patient_v1:{request.Id}";
 
         return await _cache.GetOrCreateAsync(
             cacheKey,

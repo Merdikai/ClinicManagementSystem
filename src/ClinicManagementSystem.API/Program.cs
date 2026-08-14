@@ -14,7 +14,10 @@ using Microsoft.AspNetCore.Mvc;
 using ClinicManagementSystem.Application.Interfaces;
 using ClinicManagementSystem.API.Extensions;
 using Asp.Versioning;
-
+using Hangfire;
+using Hangfire.PostgreSql;
+using MediatR;
+using ClinicManagementSystem.Application.Reports.Queries;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -98,6 +101,11 @@ builder.Services.AddScoped<PasswordHasher>();
 
 // ─── Rate Limiting ───
 builder.Services.AddCustomRateLimiting();
+
+// ─── Hangfire ───
+builder.Services.AddHangfire(config =>
+    config.UsePostgreSqlStorage(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddHangfireServer();
 
 // ─── HybridCache ───
 #pragma warning disable EXTEXP0018
@@ -209,14 +217,26 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseMiddleware<ExceptionMiddleware>();
+app.UseDeprecationHeaders();
 app.UseHttpsRedirection();
 app.UseCors("AllowAngularDev");
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
+app.UseHangfireDashboard("/hangfire");
 
 app.MapHealthChecks("/health");
 app.MapGet("/", () => Results.Ok("Clinic Management API is running"));
 app.MapControllers();
+
+using (var scope = app.Services.CreateScope())
+{
+    var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+    RecurringJob.AddOrUpdate(
+        "daily-revenue-report",
+        () => sender.Send(new GetDailyRevenueQuery(DateTime.UtcNow), CancellationToken.None),
+        Cron.Daily
+    );
+}
 
 app.Run();

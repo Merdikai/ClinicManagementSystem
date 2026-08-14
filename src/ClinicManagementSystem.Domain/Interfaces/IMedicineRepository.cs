@@ -9,5 +9,7 @@ public interface IMedicineRepository
     Task<(IEnumerable<Medicine> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, string? search, string? sortBy, bool descending);
     Task AddAsync(Medicine medicine);
     void Update(Medicine medicine);
+    Task BulkUpdatePricesAsync(Dictionary<Guid, decimal> priceUpdates);
+    Task BulkRestockAsync(Dictionary<Guid, int> restockQuantities);
     Task SaveChangesAsync();
 }

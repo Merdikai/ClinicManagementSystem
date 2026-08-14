@@ -67,6 +67,17 @@ public static class RateLimitingExtensions
                         AutoReplenishment = true
                     }));
 
+            // ─── Report Concurrency Policy ───
+            options.AddPolicy("report_concurrency", httpContext =>
+                RateLimitPartition.GetConcurrencyLimiter(
+                    partitionKey: httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "anonymous",
+                    factory: _ => new ConcurrencyLimiterOptions
+                    {
+                        PermitLimit = 2,
+                        QueueLimit = 5,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+                    }));
+
             // ─── Global Fallback ───
             options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(
                 httpContext =>

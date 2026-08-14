@@ -16,16 +16,26 @@ public class LinkGeneratorService : ILinkGeneratorService
         };
     }
 
-    public List<LinkDto> GenerateAppointmentLinks(Guid appointmentId)
+    public List<LinkDto> GenerateAppointmentLinks(ClinicManagementSystem.Domain.Entities.Appointment appointment)
     {
-        return new List<LinkDto>
+        var links = new List<LinkDto>
         {
-            new("self", $"/api/v1/appointments/{appointmentId}", "GET"),
-            new("check_in", $"/api/v1/appointments/{appointmentId}/checkin", "PATCH"),
-            new("cancel", $"/api/v1/appointments/{appointmentId}/cancel", "PATCH"),
-            new("record_vitals", $"/api/v1/vitals", "POST"),
-            new("create_consultation", $"/api/v1/consultations", "POST")
+            new("self", $"/api/v1/appointments/{appointment.Id}", "GET"),
+            new("cancel", $"/api/v1/appointments/{appointment.Id}/cancel", "PATCH")
         };
+
+        if (appointment.Status == ClinicManagementSystem.Domain.Enums.AppointmentStatus.Scheduled)
+        {
+            links.Add(new("check_in", $"/api/v1/appointments/{appointment.Id}/checkin", "PATCH"));
+        }
+
+        if (appointment.Status == ClinicManagementSystem.Domain.Enums.AppointmentStatus.CheckedIn)
+        {
+            links.Add(new("record_vitals", $"/api/v1/vitals", "POST"));
+            links.Add(new("create_consultation", $"/api/v1/consultations", "POST"));
+        }
+
+        return links;
     }
 
     public List<LinkDto> GenerateInvoiceLinks(Guid invoiceId)

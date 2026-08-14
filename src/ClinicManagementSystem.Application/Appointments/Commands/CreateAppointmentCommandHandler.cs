@@ -8,9 +8,10 @@ using MediatR;
 
 namespace ClinicManagementSystem.Application.Appointments.Commands;
 
+using ClinicManagementSystem.Application.Common;
 using ClinicManagementSystem.Application.Interfaces;
 
-public class CreateAppointmentCommandHandler : IRequestHandler<CreateAppointmentCommand, AppointmentResponseDto>
+public class CreateAppointmentCommandHandler : IRequestHandler<CreateAppointmentCommand, Result<AppointmentResponseDto>>
 {
     private readonly IAppointmentRepository _appointmentRepository;
     private readonly IMapper _mapper;
@@ -23,13 +24,13 @@ public class CreateAppointmentCommandHandler : IRequestHandler<CreateAppointment
         _linkGenerator = linkGenerator;
     }
 
-    public async Task<AppointmentResponseDto> Handle(CreateAppointmentCommand request, CancellationToken cancellationToken)
+    public async Task<Result<AppointmentResponseDto>> Handle(CreateAppointmentCommand request, CancellationToken cancellationToken)
     {
         var isAvailable = await _appointmentRepository.IsSlotAvailableAsync(
             request.DoctorId, request.ScheduledDateTime, request.DurationMinutes);
 
         if (!isAvailable)
-            throw new BusinessRuleViolationException("The requested time slot is not available.", "slot_unavailable");
+            return Result<AppointmentResponseDto>.Failure("The requested time slot is not available.", "slot_unavailable");
 
         var dto = new CreateAppointmentDto(request.PatientId, request.DoctorId, request.ScheduledDateTime, request.DurationMinutes, request.ReasonForVisit);
         var appointment = _mapper.Map<Appointment>(dto);
@@ -38,7 +39,7 @@ public class CreateAppointmentCommandHandler : IRequestHandler<CreateAppointment
         await _appointmentRepository.AddAsync(appointment);
         await _appointmentRepository.SaveChangesAsync();
         var responseDto = _mapper.Map<AppointmentResponseDto>(appointment);
-        responseDto.Links = _linkGenerator.GenerateAppointmentLinks(appointment.Id);
-        return responseDto;
+        responseDto.Links = _linkGenerator.GenerateAppointmentLinks(appointment);
+        return Result<AppointmentResponseDto>.Success(responseDto);
     }
 }

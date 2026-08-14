@@ -55,6 +55,26 @@ public class MedicineRepository : IMedicineRepository
     public void Update(Medicine medicine)
         => _context.Medicines.Update(medicine);
 
+    public async Task BulkUpdatePricesAsync(Dictionary<Guid, decimal> priceUpdates)
+    {
+        foreach (var (id, newPrice) in priceUpdates)
+        {
+            await _context.Medicines
+                .Where(m => m.Id == id)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(m => m.UnitPrice, newPrice));
+        }
+    }
+
+    public async Task BulkRestockAsync(Dictionary<Guid, int> restockQuantities)
+    {
+        foreach (var (id, quantity) in restockQuantities)
+        {
+            await _context.Medicines
+                .Where(m => m.Id == id)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(m => m.StockQuantity, m => m.StockQuantity + quantity));
+        }
+    }
+
     public async Task SaveChangesAsync()
         => await _context.SaveChangesAsync();
 }

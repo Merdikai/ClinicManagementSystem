@@ -56,3 +56,24 @@ x86/
 TestResults/
 *.trx
 *.coverage
+
+## Logs
+logs/
+*.log
+
+## Docker
+.docker/
+docker-compose.override.yml
+
+## Security & Certificates
+*.pfx
+*.p12
+*.pem
+*.crt
+*.key
+secrets.json
+
+## Local Databases
+*.sqlite
+*.db
+postgres_data/

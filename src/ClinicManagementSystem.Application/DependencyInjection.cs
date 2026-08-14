@@ -15,7 +15,11 @@ public static class DependencyInjection
         services.AddAutoMapper(typeof(DependencyInjection).Assembly);
 
         // MediatR — registers all handlers from this assembly
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly));
+        services.AddMediatR(cfg => {
+            cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
+            cfg.AddOpenBehavior(typeof(ClinicManagementSystem.Application.Behaviors.LoggingBehavior<,>));
+            cfg.AddOpenBehavior(typeof(ClinicManagementSystem.Application.Behaviors.ValidationBehavior<,>));
+        });
 
         // FluentValidation — auto-scans for all AbstractValidator<T> classes
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);

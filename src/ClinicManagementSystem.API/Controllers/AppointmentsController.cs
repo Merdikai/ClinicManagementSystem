@@ -4,13 +4,16 @@ using ClinicManagementSystem.Application.Appointments.Queries;
 using ClinicManagementSystem.Application.DTOs;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Asp.Versioning;
 using ClinicManagementSystem.API.Constants;
 using Microsoft.AspNetCore.RateLimiting;
 
 namespace ClinicManagementSystem.API.Controllers;
 
 [ApiController]
-[Route("api/v1/appointments")]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/appointments")]
+[Tags("Appointments")]
 [EnableRateLimiting(RateLimitingConstants.PatientPolicy)]
 public class AppointmentsController : ControllerBase
 {
@@ -24,11 +27,33 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpPost]
+    [EndpointSummary("Create a new appointment")]
+    [ProducesResponseType(typeof(AppointmentResponseDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] CreateAppointmentDto dto)
     {
         var command = new CreateAppointmentCommand(dto.PatientId, dto.DoctorId, dto.ScheduledDateTime, dto.DurationMinutes, dto.ReasonForVisit);
-        var appointment = await _sender.Send(command);
-        return CreatedAtAction(nameof(GetById), new { id = appointment.Id }, appointment);
+        var result = await _sender.Send(command);
+
+        return result.Match<IActionResult>(
+            onSuccess: appointment => CreatedAtAction(nameof(GetById), new { id = appointment.Id }, appointment),
+            onFailure: (error, errorCode) => errorCode switch
+            {
+                "slot_unavailable" => Conflict(new ProblemDetails
+                {
+                    Title = "Slot Unavailable",
+                    Detail = error,
+                    Status = 409
+                }),
+                _ => BadRequest(new ProblemDetails
+                {
+                    Title = "Error",
+                    Detail = error,
+                    Status = 400
+                })
+            }
+        );
     }
 
     [HttpGet("{id:guid}")]

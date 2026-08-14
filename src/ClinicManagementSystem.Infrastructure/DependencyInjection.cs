@@ -10,6 +10,9 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services)
     {
+        // DbContext
+        services.AddScoped<IClinicDbContext>(provider => provider.GetRequiredService<ClinicManagementSystem.Infrastructure.Persistence.Context.ClinicDbContext>());
+
         // Repositories
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPatientRepository, PatientRepository>();

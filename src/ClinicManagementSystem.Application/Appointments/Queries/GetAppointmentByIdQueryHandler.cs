@@ -27,7 +27,7 @@ public class GetAppointmentByIdQueryHandler : IRequestHandler<GetAppointmentById
         var appointment = await _appointmentRepository.GetByIdAsync(request.Id)
             ?? throw new NotFoundException(nameof(Appointment), request.Id);
         var dto = _mapper.Map<AppointmentResponseDto>(appointment);
-        dto.Links = _linkGenerator.GenerateAppointmentLinks(appointment.Id);
+        dto.Links = _linkGenerator.GenerateAppointmentLinks(appointment);
         return dto;
     }
 }
