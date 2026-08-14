@@ -21,3 +21,12 @@ public class AuthResponseDto
     public string FullName { get; set; } = string.Empty;
     public IList<string> Roles { get; set; } = new List<string>();
 }
+
+public record UserResponseDto(
+    Guid Id,
+    string Username,
+    string Email,
+    string FirstName,
+    string LastName,
+    string PhoneNumber
+);

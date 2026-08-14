@@ -10,6 +10,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using ClinicManagementSystem.Infrastructure.Identity;
 using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.Mvc;
+using ClinicManagementSystem.Application.Interfaces;
+
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -55,11 +58,56 @@ builder.Services.AddScoped<PasswordHasher>();
 
 // ─── Database ... (already exists)
 
+
+// ─── HybridCache ───
+#pragma warning disable EXTEXP0018
+builder.Services.AddHybridCache(options =>
+{
+    options.DefaultEntryOptions = new Microsoft.Extensions.Caching.Hybrid.HybridCacheEntryOptions
+    {
+        Expiration = TimeSpan.FromMinutes(5),
+        LocalCacheExpiration = TimeSpan.FromMinutes(5)
+    };
+});
+#pragma warning restore EXTEXP0018
+
 // ─── Controllers & Swagger ───
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<ValidationFilter>();
 });
+
+
+
+// ─── ProblemDetails for validation errors ───
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var errors = context.ModelState
+            .Where(ms => ms.Value?.Errors.Count > 0)
+            .ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value!.Errors.Select(e => e.ErrorMessage).ToArray()
+            );
+
+        var problemDetails = new ProblemDetails
+        {
+            Title = "Validation Failed",
+            Detail = "One or more validation errors occurred.",
+            Status = StatusCodes.Status400BadRequest,
+            Instance = context.HttpContext.Request.Path
+        };
+        problemDetails.Extensions.Add("errors", errors);
+
+        return new BadRequestObjectResult(problemDetails)
+        {
+            ContentTypes = { "application/problem+json" }
+        };
+    };
+});
+
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
