@@ -19,4 +19,5 @@ public class AppointmentResponseDto
     public int DurationMinutes { get; set; }
     public string Status { get; set; } = string.Empty;
     public string ReasonForVisit { get; set; } = string.Empty;
+    public List<LinkDto>? Links { get; set; }
 }

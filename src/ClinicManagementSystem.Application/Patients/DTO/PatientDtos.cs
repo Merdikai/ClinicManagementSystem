@@ -24,6 +24,7 @@ public class PatientResponseDto
     public string Email { get; set; } = string.Empty;
     public string BloodGroup { get; set; } = string.Empty;
     public DateTime RegisteredAt { get; set; }
+    public List<LinkDto>? Links { get; set; }
 }
 
 public class PagedResponse<T>

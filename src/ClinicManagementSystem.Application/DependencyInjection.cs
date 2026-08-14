@@ -1,3 +1,5 @@
+using ClinicManagementSystem.Application.Interfaces;
+using ClinicManagementSystem.Application.Services;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -7,6 +9,8 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
+        services.AddScoped<ILinkGeneratorService, LinkGeneratorService>();
+
         // AutoMapper
         services.AddAutoMapper(typeof(DependencyInjection).Assembly);
 

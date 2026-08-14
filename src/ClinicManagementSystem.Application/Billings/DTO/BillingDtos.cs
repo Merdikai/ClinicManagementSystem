@@ -28,6 +28,7 @@ public class InvoiceResponseDto
     public decimal TotalAmount { get; set; }
     public decimal BalanceDue { get; set; }
     public List<InvoiceItemResponseDto> LineItems { get; set; } = new();
+    public List<LinkDto>? Links { get; set; }
 }
 
 public class InvoiceItemResponseDto

@@ -6,15 +6,19 @@ using MediatR;
 
 namespace ClinicManagementSystem.Application.Patients.Commands;
 
+using ClinicManagementSystem.Application.Interfaces;
+
 public class CreatePatientCommandHandler : IRequestHandler<CreatePatientCommand, PatientResponseDto>
 {
     private readonly IPatientRepository _patientRepository;
     private readonly IMapper _mapper;
+    private readonly ILinkGeneratorService _linkGenerator;
 
-    public CreatePatientCommandHandler(IPatientRepository patientRepository, IMapper mapper)
+    public CreatePatientCommandHandler(IPatientRepository patientRepository, IMapper mapper, ILinkGeneratorService linkGenerator)
     {
         _patientRepository = patientRepository;
         _mapper = mapper;
+        _linkGenerator = linkGenerator;
     }
 
     public async Task<PatientResponseDto> Handle(CreatePatientCommand request, CancellationToken cancellationToken)
@@ -26,7 +30,9 @@ public class CreatePatientCommandHandler : IRequestHandler<CreatePatientCommand,
 
         await _patientRepository.AddAsync(patient);
         await _patientRepository.SaveChangesAsync();
-        return _mapper.Map<PatientResponseDto>(patient);
+        var responseDto = _mapper.Map<PatientResponseDto>(patient);
+        responseDto.Links = _linkGenerator.GeneratePatientLinks(patient.Id);
+        return responseDto;
     }
 
     private static string GenerateMRN()

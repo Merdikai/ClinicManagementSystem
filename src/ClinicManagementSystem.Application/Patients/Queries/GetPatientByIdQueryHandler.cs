@@ -8,18 +8,22 @@ using Microsoft.Extensions.Caching.Hybrid;
 
 namespace ClinicManagementSystem.Application.Patients.Queries;
 
+using ClinicManagementSystem.Application.Interfaces;
+
 #pragma warning disable EXTEXP0018
 public class GetPatientByIdQueryHandler : IRequestHandler<GetPatientByIdQuery, PatientResponseDto>
 {
     private readonly IPatientRepository _patientRepository;
     private readonly IMapper _mapper;
     private readonly HybridCache _cache;
+    private readonly ILinkGeneratorService _linkGenerator;
 
-    public GetPatientByIdQueryHandler(IPatientRepository patientRepository, IMapper mapper, HybridCache cache)
+    public GetPatientByIdQueryHandler(IPatientRepository patientRepository, IMapper mapper, HybridCache cache, ILinkGeneratorService linkGenerator)
     {
         _patientRepository = patientRepository;
         _mapper = mapper;
         _cache = cache;
+        _linkGenerator = linkGenerator;
     }
 
     public async Task<PatientResponseDto> Handle(GetPatientByIdQuery request, CancellationToken cancellationToken)
@@ -32,7 +36,9 @@ public class GetPatientByIdQueryHandler : IRequestHandler<GetPatientByIdQuery, P
             {
                 var patient = await _patientRepository.GetByIdAsync(request.Id)
                     ?? throw new NotFoundException(nameof(Patient), request.Id);
-                return _mapper.Map<PatientResponseDto>(patient);
+                var dto = _mapper.Map<PatientResponseDto>(patient);
+                dto.Links = _linkGenerator.GeneratePatientLinks(patient.Id);
+                return dto;
             },
             options: new HybridCacheEntryOptions
             {

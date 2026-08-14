@@ -8,15 +8,19 @@ using MediatR;
 
 namespace ClinicManagementSystem.Application.Billings.Commands;
 
+using ClinicManagementSystem.Application.Interfaces;
+
 public class CreateInvoiceCommandHandler : IRequestHandler<CreateInvoiceCommand, InvoiceResponseDto>
 {
     private readonly IInvoiceRepository _invoiceRepository;
     private readonly IMapper _mapper;
+    private readonly ILinkGeneratorService _linkGenerator;
 
-    public CreateInvoiceCommandHandler(IInvoiceRepository invoiceRepository, IMapper mapper)
+    public CreateInvoiceCommandHandler(IInvoiceRepository invoiceRepository, IMapper mapper, ILinkGeneratorService linkGenerator)
     {
         _invoiceRepository = invoiceRepository;
         _mapper = mapper;
+        _linkGenerator = linkGenerator;
     }
 
     public async Task<InvoiceResponseDto> Handle(CreateInvoiceCommand request, CancellationToken cancellationToken)
@@ -48,7 +52,9 @@ public class CreateInvoiceCommandHandler : IRequestHandler<CreateInvoiceCommand,
         await _invoiceRepository.AddAsync(invoice);
         await _invoiceRepository.SaveChangesAsync();
 
-        return _mapper.Map<InvoiceResponseDto>(invoice);
+        var dto = _mapper.Map<InvoiceResponseDto>(invoice);
+        dto.Links = _linkGenerator.GenerateInvoiceLinks(invoice.Id);
+        return dto;
     }
 
     private static string GenerateInvoiceNumber()
