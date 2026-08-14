@@ -19,6 +19,7 @@ public class CancelAppointmentCommandHandler : IRequestHandler<CancelAppointment
             ?? throw new NotFoundException(nameof(Appointment), request.Id);
 
         appointment.Status = AppointmentStatus.Cancelled;
+        await _appointmentRepository.SoftDeleteAsync(request.Id);
         _appointmentRepository.Update(appointment);
         await _appointmentRepository.SaveChangesAsync();
     }

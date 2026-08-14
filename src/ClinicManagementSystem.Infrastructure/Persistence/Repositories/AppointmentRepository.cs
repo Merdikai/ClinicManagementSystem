@@ -59,6 +59,17 @@ public class AppointmentRepository : IAppointmentRepository
     public void Update(Appointment appointment)
         => _context.Appointments.Update(appointment);
 
+    public async Task SoftDeleteAsync(Guid id)
+    {
+        var appointment = await _context.Appointments.FindAsync(id);
+        if (appointment is not null)
+        {
+            appointment.IsDeleted = true;
+            appointment.DeletedAt = DateTime.UtcNow;
+            _context.Appointments.Update(appointment);
+        }
+    }
+
     public async Task SaveChangesAsync()
         => await _context.SaveChangesAsync();
 }

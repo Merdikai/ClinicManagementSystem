@@ -14,6 +14,9 @@ public class Appointment
     public AppointmentStatus Status { get; set; } = AppointmentStatus.Scheduled;
     public string ReasonForVisit { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public bool IsDeleted { get; set; } = false;
+    public DateTime? DeletedAt { get; set; }
+    public uint RowVersion { get; set; }
 
     public VitalSign? VitalSign { get; set; }
     public Consultation? Consultation { get; set; }

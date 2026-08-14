@@ -5,13 +5,15 @@ using ClinicManagementSystem.Application.Medicines.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Asp.Versioning;
 using ClinicManagementSystem.API.Constants;
 using Microsoft.AspNetCore.RateLimiting;
 
 namespace ClinicManagementSystem.API.Controllers;
 
 [ApiController]
-[Route("api/v1/medicines")]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/medicines")]
 [Authorize(Roles = "Admin,Pharmacist")]
 [EnableRateLimiting(RateLimitingConstants.StaffPolicy)]
 public class MedicinesController : ControllerBase
@@ -34,9 +36,9 @@ public class MedicinesController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 10, [FromQuery] string? search = null)
+    public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 10, [FromQuery] string? search = null, [FromQuery] string? sortBy = null, [FromQuery] bool descending = false)
     {
-        var medicines = await _sender.Send(new GetMedicinesPagedQuery(page, pageSize, search));
+        var medicines = await _sender.Send(new GetMedicinesPagedQuery(page, pageSize, search, sortBy, descending));
         return Ok(medicines);
     }
 

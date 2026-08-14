@@ -26,6 +26,8 @@ public static class DependencyInjection
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
         services.AddScoped<IPasswordHasher, PasswordHasher>();
 
+        services.AddScoped<IAuditService, ClinicManagementSystem.Infrastructure.Services.AuditService>();
+
         return services;
     }
 }

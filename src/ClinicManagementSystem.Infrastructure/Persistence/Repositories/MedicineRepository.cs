@@ -20,7 +20,7 @@ public class MedicineRepository : IMedicineRepository
     public async Task<IEnumerable<Medicine>> GetAllAsync()
         => await _context.Medicines.OrderBy(m => m.Name).ToListAsync();
 
-    public async Task<(IEnumerable<Medicine> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, string? search)
+    public async Task<(IEnumerable<Medicine> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, string? search, string? sortBy, bool descending)
     {
         var query = _context.Medicines.AsQueryable();
 
@@ -32,8 +32,16 @@ public class MedicineRepository : IMedicineRepository
         }
 
         var totalCount = await query.CountAsync();
+
+        query = sortBy?.ToLower() switch
+        {
+            "name" => descending ? query.OrderByDescending(m => m.Name) : query.OrderBy(m => m.Name),
+            "code" => descending ? query.OrderByDescending(m => m.Code) : query.OrderBy(m => m.Code),
+            "unitprice" => descending ? query.OrderByDescending(m => m.UnitPrice) : query.OrderBy(m => m.UnitPrice),
+            _ => query.OrderBy(m => m.Name)
+        };
+
         var items = await query
-            .OrderBy(m => m.Name)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();

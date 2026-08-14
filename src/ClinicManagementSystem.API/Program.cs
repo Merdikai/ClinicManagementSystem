@@ -13,7 +13,7 @@ using Microsoft.OpenApi.Models;
 using Microsoft.AspNetCore.Mvc;
 using ClinicManagementSystem.Application.Interfaces;
 using ClinicManagementSystem.API.Extensions;
-
+using Asp.Versioning;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -30,7 +30,42 @@ builder.Services.AddDbContext<ClinicDbContext>(options =>
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices();
 
+// ─── CORS ───
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAngularDev", policy =>
+    {
+        policy.WithOrigins(
+                "http://localhost:4200",      // Angular dev server
+                "http://localhost:5041"       // Swagger
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
 
+// ─── Health Checks ───
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<ClinicDbContext>();
+
+// ─── API Versioning ───
+builder.Services.AddApiVersioning(options =>
+{
+    options.DefaultApiVersion = new ApiVersion(1, 0);
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.ReportApiVersions = true;
+    options.ApiVersionReader = ApiVersionReader.Combine(
+        new UrlSegmentApiVersionReader(),
+        new HeaderApiVersionReader("X-Api-Version")
+    );
+})
+.AddMvc()
+.AddApiExplorer(options =>
+{
+    options.GroupNameFormat = "'v'V";
+    options.SubstituteApiVersionInUrl = true;
+});
 // ─── JWT Authentication ───
 var jwtKey = builder.Configuration["Jwt:Key"]!;
 builder.Services.AddAuthentication(options =>
@@ -175,10 +210,12 @@ if (app.Environment.IsDevelopment())
 
 app.UseMiddleware<ExceptionMiddleware>();
 app.UseHttpsRedirection();
+app.UseCors("AllowAngularDev");
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
 
+app.MapHealthChecks("/health");
 app.MapGet("/", () => Results.Ok("Clinic Management API is running"));
 app.MapControllers();
 

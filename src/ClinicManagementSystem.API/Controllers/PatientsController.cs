@@ -4,13 +4,15 @@ using ClinicManagementSystem.Application.Patients.Commands;
 using ClinicManagementSystem.Application.Patients.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Asp.Versioning;
 using ClinicManagementSystem.API.Constants;
 using Microsoft.AspNetCore.RateLimiting;
 
 namespace ClinicManagementSystem.API.Controllers;
 
 [ApiController]
-[Route("api/v1/patients")]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/patients")]
 [EnableRateLimiting(RateLimitingConstants.PatientPolicy)]
 public class PatientsController : ControllerBase
 {
@@ -40,9 +42,9 @@ public class PatientsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 10, [FromQuery] string? search = null)
+    public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 10, [FromQuery] string? search = null, [FromQuery] string? sortBy = null, [FromQuery] bool descending = false)
     {
-        var patients = await _sender.Send(new GetPatientsPagedQuery(page, pageSize, search));
+        var patients = await _sender.Send(new GetPatientsPagedQuery(page, pageSize, search, sortBy, descending));
         return Ok(patients);
     }
 }

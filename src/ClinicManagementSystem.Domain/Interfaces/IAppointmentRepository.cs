@@ -11,5 +11,6 @@ public interface IAppointmentRepository
     Task<bool> IsSlotAvailableAsync(Guid doctorId, DateTime dateTime, int durationMinutes);
     Task AddAsync(Appointment appointment);
     void Update(Appointment appointment);
+    Task SoftDeleteAsync(Guid id);
     Task SaveChangesAsync();
 }
