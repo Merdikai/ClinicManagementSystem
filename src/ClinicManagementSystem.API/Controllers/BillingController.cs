@@ -5,12 +5,15 @@ using ClinicManagementSystem.Application.DTOs;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ClinicManagementSystem.API.Constants;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace ClinicManagementSystem.API.Controllers;
 
 [ApiController]
 [Route("api/v1/billing")]
 [Authorize(Roles = "Admin,Accountant")]
+[EnableRateLimiting(RateLimitingConstants.StaffPolicy)]
 public class BillingController : ControllerBase
 {
     private readonly ISender _sender;

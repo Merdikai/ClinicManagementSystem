@@ -4,11 +4,14 @@ using ClinicManagementSystem.Application.Patients.Commands;
 using ClinicManagementSystem.Application.Patients.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using ClinicManagementSystem.API.Constants;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace ClinicManagementSystem.API.Controllers;
 
 [ApiController]
 [Route("api/v1/patients")]
+[EnableRateLimiting(RateLimitingConstants.PatientPolicy)]
 public class PatientsController : ControllerBase
 {
     private readonly ISender _sender;

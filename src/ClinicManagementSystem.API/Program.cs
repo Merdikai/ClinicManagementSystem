@@ -12,10 +12,12 @@ using ClinicManagementSystem.Infrastructure.Identity;
 using Microsoft.OpenApi.Models;
 using Microsoft.AspNetCore.Mvc;
 using ClinicManagementSystem.Application.Interfaces;
+using ClinicManagementSystem.API.Extensions;
 
 
 
 var builder = WebApplication.CreateBuilder(args);
+
 
 // ─── Database ───
 builder.Services.AddDbContext<ClinicDbContext>(options =>
@@ -58,6 +60,9 @@ builder.Services.AddScoped<PasswordHasher>();
 
 // ─── Database ... (already exists)
 
+
+// ─── Rate Limiting ───
+builder.Services.AddCustomRateLimiting();
 
 // ─── HybridCache ───
 #pragma warning disable EXTEXP0018
@@ -172,6 +177,7 @@ app.UseMiddleware<ExceptionMiddleware>();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapGet("/", () => Results.Ok("Clinic Management API is running"));
 app.MapControllers();

@@ -4,11 +4,14 @@ using ClinicManagementSystem.Application.Appointments.Queries;
 using ClinicManagementSystem.Application.DTOs;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using ClinicManagementSystem.API.Constants;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace ClinicManagementSystem.API.Controllers;
 
 [ApiController]
 [Route("api/v1/appointments")]
+[EnableRateLimiting(RateLimitingConstants.PatientPolicy)]
 public class AppointmentsController : ControllerBase
 {
     private readonly ISender _sender;

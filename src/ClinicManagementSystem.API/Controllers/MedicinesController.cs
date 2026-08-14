@@ -5,12 +5,15 @@ using ClinicManagementSystem.Application.Medicines.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ClinicManagementSystem.API.Constants;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace ClinicManagementSystem.API.Controllers;
 
 [ApiController]
 [Route("api/v1/medicines")]
 [Authorize(Roles = "Admin,Pharmacist")]
+[EnableRateLimiting(RateLimitingConstants.StaffPolicy)]
 public class MedicinesController : ControllerBase
 {
     private readonly ISender _sender;
