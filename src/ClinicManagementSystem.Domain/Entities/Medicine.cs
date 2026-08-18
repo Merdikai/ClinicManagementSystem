@@ -1,4 +1,4 @@
-namespace ClinicManagementSystem.Domain.Entities;
+﻿namespace ClinicManagementSystem.Domain.Entities;
 
 public class Medicine
 {
@@ -8,4 +8,6 @@ public class Medicine
     public string Category { get; set; } = string.Empty;
     public int StockQuantity { get; set; }
     public decimal UnitPrice { get; set; }
+    public DateTime? ExpiryDate { get; set; }
+    public string BatchNumber { get; set; } = string.Empty;
 }

@@ -1,4 +1,4 @@
-using ClinicManagementSystem.API.Hubs;
+﻿using ClinicManagementSystem.API.Hubs;
 using ClinicManagementSystem.Application.Interfaces;
 using Microsoft.AspNetCore.SignalR;
 
@@ -6,17 +6,16 @@ namespace ClinicManagementSystem.API.Services;
 
 public class NotificationService : INotificationService
 {
-    private readonly IHubContext<ClinicHub> _hubContext;
+    private readonly IHubContext<ClinicHub, IClinicHubClient> _hubContext;
 
-    public NotificationService(IHubContext<ClinicHub> hubContext)
+    public NotificationService(IHubContext<ClinicHub, IClinicHubClient> hubContext)
     {
         _hubContext = hubContext;
     }
 
     public async Task NotifyAppointmentBookedAsync(Guid doctorId, Guid appointmentId, string patientName)
     {
-        await _hubContext.Clients.Group($"user-{doctorId}").SendAsync(
-            "AppointmentBooked",
+        await _hubContext.Clients.Group($"user-{doctorId}").AppointmentBooked(
             new
             {
                 AppointmentId = appointmentId,
@@ -29,8 +28,7 @@ public class NotificationService : INotificationService
 
     public async Task NotifyPatientCheckedInAsync(Guid doctorId, Guid appointmentId, string patientName)
     {
-        await _hubContext.Clients.Group($"user-{doctorId}").SendAsync(
-            "PatientCheckedIn",
+        await _hubContext.Clients.Group($"user-{doctorId}").PatientCheckedIn(
             new
             {
                 AppointmentId = appointmentId,
@@ -43,34 +41,21 @@ public class NotificationService : INotificationService
 
     public async Task NotifyLowStockAsync(string medicineName, int currentStock)
     {
-        await _hubContext.Clients.Group("Pharmacist").SendAsync(
-            "LowStockAlert",
-            new
-            {
-                MedicineName = medicineName,
-                CurrentStock = currentStock,
-                Timestamp = DateTime.UtcNow,
-                Message = $"Low stock alert: {medicineName} has only {currentStock} units left"
-            }
-        );
+        var payload = new
+        {
+            MedicineName = medicineName,
+            CurrentStock = currentStock,
+            Timestamp = DateTime.UtcNow,
+            Message = $"Low stock alert: {medicineName} has only {currentStock} units left"
+        };
 
-        // Also notify admins
-        await _hubContext.Clients.Group("Admin").SendAsync(
-            "LowStockAlert",
-            new
-            {
-                MedicineName = medicineName,
-                CurrentStock = currentStock,
-                Timestamp = DateTime.UtcNow,
-                Message = $"Low stock alert: {medicineName} has only {currentStock} units left"
-            }
-        );
+        await _hubContext.Clients.Group("Pharmacist").LowStockAlert(payload);
+        await _hubContext.Clients.Group("Admin").LowStockAlert(payload);
     }
 
     public async Task NotifyInvoicePaidAsync(Guid patientId, Guid invoiceId, decimal amountPaid)
     {
-        await _hubContext.Clients.Group($"patient-{patientId}").SendAsync(
-            "InvoicePaid",
+        await _hubContext.Clients.Group($"patient-{patientId}").InvoicePaid(
             new
             {
                 InvoiceId = invoiceId,

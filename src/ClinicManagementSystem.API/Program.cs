@@ -1,4 +1,4 @@
-using ClinicManagementSystem.Application;
+﻿using ClinicManagementSystem.Application;
 using ClinicManagementSystem.Infrastructure;
 using ClinicManagementSystem.Infrastructure.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
@@ -22,7 +22,6 @@ using ClinicManagementSystem.API.Hubs;
 using ClinicManagementSystem.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
-
 
 // ─── Database ───
 builder.Services.AddDbContext<ClinicDbContext>(options =>
@@ -71,6 +70,7 @@ builder.Services.AddApiVersioning(options =>
     options.GroupNameFormat = "'v'V";
     options.SubstituteApiVersionInUrl = true;
 });
+
 // ─── JWT Authentication ───
 var jwtKey = builder.Configuration["Jwt:Key"]!;
 builder.Services.AddAuthentication(options =>
@@ -96,10 +96,6 @@ builder.Services.AddAuthentication(options =>
 // ─── Register JWT helpers ───
 builder.Services.AddScoped<JwtTokenGenerator>();
 builder.Services.AddScoped<PasswordHasher>();
-//builder.Services.AddScoped<IAuthService, AuthService>();
-
-// ─── Database ... (already exists)
-
 
 // ─── Rate Limiting ───
 builder.Services.AddCustomRateLimiting();
@@ -110,19 +106,18 @@ builder.Services.AddHangfire(config =>
         options.UseNpgsqlConnection(builder.Configuration.GetConnectionString("DefaultConnection"))));
 builder.Services.AddHangfireServer();
 
-
 // ─── SignalR & Notifications ───
 builder.Services.AddSignalR();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 
-// ─── HybridCache ───
+// ─── HybridCache (L1/L2 TTLs from M7) ───
 #pragma warning disable EXTEXP0018
 builder.Services.AddHybridCache(options =>
 {
     options.DefaultEntryOptions = new Microsoft.Extensions.Caching.Hybrid.HybridCacheEntryOptions
     {
-        Expiration = TimeSpan.FromMinutes(5),
-        LocalCacheExpiration = TimeSpan.FromMinutes(5)
+        Expiration = TimeSpan.FromMinutes(10),       // L2 TTL
+        LocalCacheExpiration = TimeSpan.FromMinutes(2) // L1 in-memory TTL
     };
 });
 #pragma warning restore EXTEXP0018
@@ -132,8 +127,6 @@ builder.Services.AddControllers(options =>
 {
     options.Filters.Add<ValidationFilter>();
 });
-
-
 
 // ─── ProblemDetails for validation errors ───
 builder.Services.Configure<ApiBehaviorOptions>(options =>
@@ -162,7 +155,6 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
         };
     };
 });
-
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -202,7 +194,6 @@ using (var scope = app.Services.CreateScope())
     await DbInitializer.SeedAsync(context);
 }
 
-
 // ─── Middleware Pipeline ───
 app.UseMiddleware<RequestLoggingMiddleware>();   // ← First: log everything
 app.UseMiddleware<ExceptionMiddleware>();        // ← Second: catch exceptions
@@ -224,7 +215,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseMiddleware<ExceptionMiddleware>();
+app.UseStaticFiles();
 app.UseDeprecationHeaders();
 app.UseHttpsRedirection();
 app.UseCors("AllowAngularDev");
@@ -233,7 +224,7 @@ app.UseAuthorization();
 app.UseRateLimiter();
 app.UseHangfireDashboard("/hangfire");
 
-app.MapHealthChecks("/health");
+app.MapHealthChecks("/health").DisableRateLimiting();
 app.MapGet("/", () => Results.Ok("Clinic Management API is running"));
 app.MapControllers();
 app.MapHub<ClinicHub>("/hubs/clinic");

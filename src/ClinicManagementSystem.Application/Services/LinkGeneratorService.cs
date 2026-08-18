@@ -1,4 +1,4 @@
-using ClinicManagementSystem.Application.DTOs;
+﻿using ClinicManagementSystem.Application.DTOs;
 using ClinicManagementSystem.Application.Interfaces;
 
 namespace ClinicManagementSystem.Application.Services;
@@ -44,6 +44,15 @@ public class LinkGeneratorService : ILinkGeneratorService
         {
             new("self", $"/api/v1/billing/invoices/{invoiceId}", "GET"),
             new("process_payment", $"/api/v1/billing/payments", "POST")
+        };
+    }
+
+    public List<LinkDto> GenerateMedicineLinks(Guid medicineId)
+    {
+        return new List<LinkDto>
+        {
+            new("self", $"/api/v1/medicines/{medicineId}", "GET"),
+            new("dispense", $"/api/v1/medicines/{medicineId}/dispense", "PATCH")
         };
     }
 }

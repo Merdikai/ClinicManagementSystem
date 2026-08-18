@@ -1,4 +1,5 @@
-using ClinicManagementSystem.API.Constants;
+﻿using ClinicManagementSystem.API.Constants;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
@@ -11,6 +12,8 @@ public static class RateLimitingExtensions
     {
         services.AddRateLimiter(options =>
         {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
             // ─── Anonymous Policy (No Authentication) ───
             options.AddPolicy(RateLimitingConstants.AnonymousPolicy, httpContext =>
                 RateLimitPartition.GetTokenBucketLimiter(
@@ -87,7 +90,6 @@ public static class RateLimitingExtensions
 
                     return RateLimitPartition.GetTokenBucketLimiter(partitionKey, _ =>
                     {
-                        // Determine limits based on role
                         var (tokenLimit, windowSeconds) = role.ToLower() switch
                         {
                             "admin" => (RateLimitingConstants.AdminLimit, RateLimitingConstants.AdminWindowSeconds),
@@ -109,18 +111,29 @@ public static class RateLimitingExtensions
                     });
                 });
 
-            // ─── Return Retry-After Header ───
+            // ─── Return Dynamic Retry-After Header and ProblemDetails ───
             options.OnRejected = async (context, cancellationToken) =>
             {
-                context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
-                context.HttpContext.Response.Headers.RetryAfter = 
-                    context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter) 
-                        ? retryAfter.TotalSeconds.ToString() 
-                        : "10";
+                var retryAfter = "10";
+                if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var ts))
+                {
+                    retryAfter = ((int)ts.TotalSeconds).ToString();
+                }
 
-                await context.HttpContext.Response.WriteAsync(
-                    "{\"title\":\"Too Many Requests\",\"status\":429,\"detail\":\"Rate limit exceeded. Please try again later.\"}",
-                    cancellationToken);
+                context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                context.HttpContext.Response.Headers.RetryAfter = retryAfter;
+                context.HttpContext.Response.ContentType = "application/problem+json";
+
+                var problem = new ProblemDetails
+                {
+                    Title = "Rate limit exceeded",
+                    Detail = $"Too many requests. Retry after {retryAfter} seconds.",
+                    Status = StatusCodes.Status429TooManyRequests,
+                    Type = "https://tools.ietf.org/html/rfc6585#section-4",
+                    Instance = context.HttpContext.Request.Path
+                };
+
+                await context.HttpContext.Response.WriteAsJsonAsync(problem, cancellationToken);
             };
         });
 

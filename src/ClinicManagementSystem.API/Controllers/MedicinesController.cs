@@ -1,4 +1,5 @@
-using AutoMapper;
+﻿using AutoMapper;
+using ClinicManagementSystem.Application.Common;
 using ClinicManagementSystem.Application.DTOs;
 using ClinicManagementSystem.Application.Medicines.Commands;
 using ClinicManagementSystem.Application.Medicines.Queries;
@@ -39,11 +40,25 @@ public class MedicinesController : ControllerBase
     }
 
     [HttpGet]
-    [EndpointSummary("Get paginated list of medicines")]
+    [EndpointSummary("Get paginated list of medicines (supports ?fields=id,name,unitPrice)")]
     [ProducesResponseType(typeof(PagedResponse<MedicineResponseDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 10, [FromQuery] string? search = null, [FromQuery] string? sortBy = null, [FromQuery] bool descending = false)
+    public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 10, [FromQuery] string? search = null, [FromQuery] string? sortBy = null, [FromQuery] bool descending = false, [FromQuery] string? fields = null)
     {
         var medicines = await _sender.Send(new GetMedicinesPagedQuery(page, pageSize, search, sortBy, descending));
+        if (!string.IsNullOrWhiteSpace(fields))
+        {
+            var shapedItems = medicines.Items.ShapeData(fields);
+            return Ok(new
+            {
+                Items = shapedItems,
+                medicines.TotalCount,
+                medicines.Page,
+                medicines.PageSize,
+                medicines.TotalPages,
+                medicines.HasNext,
+                medicines.HasPrevious
+            });
+        }
         return Ok(medicines);
     }
 

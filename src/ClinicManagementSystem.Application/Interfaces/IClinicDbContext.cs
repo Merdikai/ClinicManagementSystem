@@ -1,4 +1,4 @@
-using ClinicManagementSystem.Domain.Entities;
+﻿using ClinicManagementSystem.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace ClinicManagementSystem.Application.Interfaces;
@@ -22,6 +22,7 @@ public interface IClinicDbContext
     DbSet<Payment> Payments { get; }
     DbSet<AuditLog> AuditLogs { get; }
     DbSet<RefreshToken> RefreshTokens { get; }
+    DbSet<PasswordResetToken> PasswordResetTokens { get; }
     
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

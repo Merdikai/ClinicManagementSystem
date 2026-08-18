@@ -1,4 +1,4 @@
-using ClinicManagementSystem.Application.Interfaces;
+﻿using ClinicManagementSystem.Application.Interfaces;
 using ClinicManagementSystem.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -27,15 +27,14 @@ public class ClinicDbContext : DbContext, IClinicDbContext
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        // Apply all IEntityTypeConfiguration classes in this assembly
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ClinicDbContext).Assembly);
 
-        // Set ALL decimal properties to decimal(18,2) for financial precision
         foreach (var property in modelBuilder.Model.GetEntityTypes()
             .SelectMany(t => t.GetProperties())
             .Where(p => p.ClrType == typeof(decimal) || p.ClrType == typeof(decimal?)))
@@ -43,7 +42,6 @@ public class ClinicDbContext : DbContext, IClinicDbContext
             property.SetColumnType("decimal(18,2)");
         }
 
-        // Shadow properties for audit
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
             if (entityType.ClrType.Namespace?.Contains("Domain.Entities") == true)
@@ -67,7 +65,7 @@ public class ClinicDbContext : DbContext, IClinicDbContext
             if (entry.Entity.GetType().Namespace?.Contains("Domain.Entities") == true)
             {
                 entry.Property("LastUpdated").CurrentValue = DateTime.UtcNow;
-                entry.Property("LastUpdatedBy").CurrentValue = "system"; // Simplified for this context
+                entry.Property("LastUpdatedBy").CurrentValue = "system";
             }
         }
 

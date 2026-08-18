@@ -1,4 +1,4 @@
-using ClinicManagementSystem.Application.Interfaces;
+﻿using ClinicManagementSystem.Application.Interfaces;
 using ClinicManagementSystem.Application.Services;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,14 +14,14 @@ public static class DependencyInjection
         // AutoMapper
         services.AddAutoMapper(typeof(DependencyInjection).Assembly);
 
-        // MediatR — registers all handlers from this assembly
+        // MediatR
         services.AddMediatR(cfg => {
             cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
             cfg.AddOpenBehavior(typeof(ClinicManagementSystem.Application.Behaviors.LoggingBehavior<,>));
             cfg.AddOpenBehavior(typeof(ClinicManagementSystem.Application.Behaviors.ValidationBehavior<,>));
         });
 
-        // FluentValidation — auto-scans for all AbstractValidator<T> classes
+        // FluentValidation
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
 
         return services;

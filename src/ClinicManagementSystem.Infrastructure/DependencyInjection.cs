@@ -1,6 +1,8 @@
-using ClinicManagementSystem.Application.Interfaces;
+﻿using ClinicManagementSystem.Application.Interfaces;
 using ClinicManagementSystem.Domain.Interfaces;
 using ClinicManagementSystem.Infrastructure.Identity;
+using ClinicManagementSystem.Infrastructure.ExternalServices;
+using ClinicManagementSystem.Infrastructure.Persistence.Context;
 using ClinicManagementSystem.Infrastructure.Persistence.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -10,14 +12,13 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services)
     {
-        // DbContext
-        services.AddScoped<IClinicDbContext>(provider => provider.GetRequiredService<ClinicManagementSystem.Infrastructure.Persistence.Context.ClinicDbContext>());
+        services.AddScoped<IClinicDbContext>(provider => provider.GetRequiredService<ClinicDbContext>());
 
         // Repositories
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPatientRepository, PatientRepository>();
-        services.AddScoped<IAppointmentRepository, AppointmentRepository>();
         services.AddScoped<IDoctorScheduleRepository, DoctorScheduleRepository>();
+        services.AddScoped<IAppointmentRepository, AppointmentRepository>();
         services.AddScoped<IVitalSignRepository, VitalSignRepository>();
         services.AddScoped<IConsultationRepository, ConsultationRepository>();
         services.AddScoped<IPrescriptionRepository, PrescriptionRepository>();
@@ -25,11 +26,11 @@ public static class DependencyInjection
         services.AddScoped<IInvoiceRepository, InvoiceRepository>();
         services.AddScoped<IPaymentRepository, PaymentRepository>();
 
-        // Identity Services (register as their interfaces)
-        services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+        // Services
         services.AddScoped<IPasswordHasher, PasswordHasher>();
-
-        services.AddScoped<IAuditService, ClinicManagementSystem.Infrastructure.Services.AuditService>();
+        services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+        services.AddScoped<IEmailService, EmailService>();
+        services.AddScoped<IPdfService, PdfService>();
 
         return services;
     }
