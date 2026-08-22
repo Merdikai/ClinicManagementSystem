@@ -16,16 +16,19 @@ public class GetDailyRevenueQueryHandler : IRequestHandler<GetDailyRevenueQuery,
 
     public async Task<DailyRevenueReportDto> Handle(GetDailyRevenueQuery request, CancellationToken cancellationToken)
     {
+        var start = request.Date.Date;
+        var end = start.AddDays(1);
+
         var invoices = await _context.Invoices
-            .Where(i => i.IssueDate.Date == request.Date.Date && i.Status != Domain.Enums.InvoiceStatus.Cancelled)
+            .Where(i => i.IssueDate >= start && i.IssueDate < end && i.Status != Domain.Enums.InvoiceStatus.Cancelled)
             .ToListAsync(cancellationToken);
 
         var appointments = await _context.Appointments
-            .Where(a => a.ScheduledDateTime.Date == request.Date.Date && !a.IsDeleted)
+            .Where(a => a.ScheduledDateTime >= start && a.ScheduledDateTime < end && !a.IsDeleted)
             .CountAsync(cancellationToken);
 
         var patients = await _context.Patients
-            .Where(p => p.RegisteredAt.Date == request.Date.Date)
+            .Where(p => p.RegisteredAt >= start && p.RegisteredAt < end)
             .CountAsync(cancellationToken);
 
         return new DailyRevenueReportDto(

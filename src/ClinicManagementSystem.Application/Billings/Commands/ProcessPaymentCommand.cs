@@ -1,3 +1,4 @@
+using ClinicManagementSystem.Application.Common;
 using ClinicManagementSystem.Application.DTOs;
 using MediatR;
 
@@ -8,4 +9,4 @@ public record ProcessPaymentCommand(
     decimal AmountPaid,
     string PaymentMethod,
     string TransactionReference
-) : IRequest<PaymentResponseDto>;
+) : IRequest<Result<PaymentResponseDto>>;

@@ -39,8 +39,10 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
             Token = _tokenGenerator.GenerateToken(user, roles),
             RefreshToken = refreshToken,
             Username = user.Username,
+            Email = user.Email ?? string.Empty,
             FullName = $"{user.FirstName} {user.LastName}",
-            Roles = roles
+            Roles = roles,
+            ExpiresAt = DateTime.UtcNow.AddHours(2)
         };
     }
 

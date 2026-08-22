@@ -15,7 +15,10 @@ public class UserRepository : IUserRepository
     }
 
     public async Task<User?> GetByIdAsync(Guid id)
-        => await _context.Users.FindAsync(id);
+        => await _context.Users
+            .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+            .FirstOrDefaultAsync(u => u.Id == id);
 
     public async Task<User?> GetByUsernameAsync(string username)
         => await _context.Users
@@ -30,7 +33,10 @@ public class UserRepository : IUserRepository
             .FirstOrDefaultAsync(u => u.Email == email);
 
     public async Task<IEnumerable<User>> GetAllAsync()
-        => await _context.Users.ToListAsync();
+        => await _context.Users
+            .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+            .ToListAsync();
 
     public async Task AddAsync(User user)
         => await _context.Users.AddAsync(user);

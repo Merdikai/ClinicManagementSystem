@@ -1,3 +1,4 @@
+using ClinicManagementSystem.Application.Common;
 using ClinicManagementSystem.Application.DTOs;
 using MediatR;
 
@@ -9,4 +10,4 @@ public record CreateInvoiceCommand(
     decimal TaxAmount,
     decimal DiscountAmount,
     List<CreateInvoiceItemDto> Items
-) : IRequest<InvoiceResponseDto>;
+) : IRequest<Result<InvoiceResponseDto>>;

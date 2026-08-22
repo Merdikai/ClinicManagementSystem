@@ -1,4 +1,4 @@
-﻿using Asp.Versioning;
+using Asp.Versioning;
 using ClinicManagementSystem.Application.DTOs;
 using ClinicManagementSystem.Application.Reports.DTOs;
 using ClinicManagementSystem.Application.Reports.Queries;
@@ -22,7 +22,6 @@ public class ReportsController : ControllerBase
     }
 
     [HttpGet("dashboard")]
-    [Authorize(Roles = "Admin,Doctor")]
     [EndpointSummary("Get real-time operational dashboard summary KPIs")]
     [ProducesResponseType(typeof(DashboardSummaryDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetDashboardSummary()
@@ -32,7 +31,7 @@ public class ReportsController : ControllerBase
     }
 
     [HttpGet("daily-revenue")]
-    [Authorize(Roles = "Admin,Accountant")]
+    [Authorize(Roles = "Admin,Accountant,Receptionist,Doctor")]
     [EndpointSummary("Get daily revenue report for a specific date")]
     [ProducesResponseType(typeof(DailyRevenueReportDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetDailyRevenue([FromQuery] DateTime? date)
@@ -43,7 +42,6 @@ public class ReportsController : ControllerBase
     }
 
     [HttpGet("top-medicines")]
-    [Authorize(Roles = "Admin,Doctor,Pharmacist")]
     [EndpointSummary("Get top prescribed medicines")]
     [ProducesResponseType(typeof(IEnumerable<TopMedicineDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTopMedicines([FromQuery] int count = 5)
@@ -53,7 +51,6 @@ public class ReportsController : ControllerBase
     }
 
     [HttpGet("doctor-appointments")]
-    [Authorize(Roles = "Admin")]
     [EndpointSummary("Get appointment counts per doctor for a date range")]
     [ProducesResponseType(typeof(IEnumerable<DoctorAppointmentCountDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetDoctorAppointments([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
@@ -65,7 +62,7 @@ public class ReportsController : ControllerBase
     }
 
     [HttpGet("export/patients")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Accountant,Receptionist,Doctor,Nurse")]
     [EndpointSummary("Export all patients to CSV")]
     public async Task<IActionResult> ExportPatients()
     {
@@ -74,7 +71,7 @@ public class ReportsController : ControllerBase
     }
 
     [HttpGet("export/invoices")]
-    [Authorize(Roles = "Admin,Accountant")]
+    [Authorize(Roles = "Admin,Accountant,Receptionist")]
     [EndpointSummary("Export invoices to CSV")]
     public async Task<IActionResult> ExportInvoices([FromQuery] DateTime? startDate = null, [FromQuery] DateTime? endDate = null)
     {

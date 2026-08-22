@@ -1,16 +1,55 @@
 namespace ClinicManagementSystem.Application.DTOs;
 
-public record CreatePatientDto(
-    string FirstName,
-    string LastName,
-    DateTime DateOfBirth,
-    string Gender,
-    string Phone,
-    string Email,
-    string Address,
-    string BloodGroup,
-    string EmergencyContact
-);
+public class CreatePatientDto
+{
+    private string _phone = string.Empty;
+
+    public CreatePatientDto() { }
+
+    public CreatePatientDto(
+        string firstName,
+        string lastName,
+        DateTime dateOfBirth,
+        string gender,
+        string phone,
+        string email,
+        string address,
+        string bloodGroup,
+        string emergencyContact)
+    {
+        FirstName = firstName;
+        LastName = lastName;
+        DateOfBirth = dateOfBirth;
+        Gender = gender;
+        Phone = phone;
+        Email = email;
+        Address = address;
+        BloodGroup = bloodGroup;
+        EmergencyContact = emergencyContact;
+    }
+
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
+    public DateTime DateOfBirth { get; set; }
+    public string Gender { get; set; } = string.Empty;
+    
+    public string Phone
+    {
+        get => _phone;
+        set => _phone = value ?? string.Empty;
+    }
+
+    public string? PhoneNumber
+    {
+        get => _phone;
+        set { if (!string.IsNullOrWhiteSpace(value)) _phone = value; }
+    }
+
+    public string? Email { get; set; }
+    public string? Address { get; set; }
+    public string? BloodGroup { get; set; }
+    public string? EmergencyContact { get; set; }
+}
 
 public class PatientResponseDto
 {

@@ -22,7 +22,7 @@ public class DoctorSchedulesController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Doctor,Admin")]
+    [Authorize(Roles = "Doctor,Admin,Receptionist")]
     [EndpointSummary("Create a new doctor availability schedule")]
     [ProducesResponseType(typeof(DoctorScheduleResponseDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
@@ -59,7 +59,7 @@ public class DoctorSchedulesController : ControllerBase
     }
 
     [HttpPatch("{id:guid}/toggle-status")]
-    [Authorize(Roles = "Doctor,Admin")]
+    [Authorize(Roles = "Doctor,Admin,Receptionist")]
     [EndpointSummary("Toggle doctor schedule active status")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -79,7 +79,7 @@ public class DoctorSchedulesController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
-    [Authorize(Roles = "Doctor,Admin")]
+    [Authorize(Roles = "Doctor,Admin,Receptionist")]
     [EndpointSummary("Delete a doctor schedule")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]

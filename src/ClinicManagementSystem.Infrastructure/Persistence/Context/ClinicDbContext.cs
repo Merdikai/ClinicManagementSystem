@@ -8,7 +8,12 @@ namespace ClinicManagementSystem.Infrastructure.Persistence.Context;
 
 public class ClinicDbContext : DbContext, IClinicDbContext
 {
-    public ClinicDbContext(DbContextOptions<ClinicDbContext> options) : base(options) { }
+    private readonly IHttpContextAccessor? _httpContextAccessor;
+
+    public ClinicDbContext(DbContextOptions<ClinicDbContext> options, IHttpContextAccessor? httpContextAccessor = null) : base(options)
+    {
+        _httpContextAccessor = httpContextAccessor;
+    }
 
     public DbSet<User> Users => Set<User>();
     public DbSet<Role> Roles => Set<Role>();
@@ -65,7 +70,7 @@ public class ClinicDbContext : DbContext, IClinicDbContext
             if (entry.Entity.GetType().Namespace?.Contains("Domain.Entities") == true)
             {
                 entry.Property("LastUpdated").CurrentValue = DateTime.UtcNow;
-                entry.Property("LastUpdatedBy").CurrentValue = "system";
+                entry.Property("LastUpdatedBy").CurrentValue = _httpContextAccessor?.HttpContext?.User?.Identity?.Name ?? "system";
             }
         }
 

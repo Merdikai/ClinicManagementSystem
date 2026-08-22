@@ -26,7 +26,6 @@ public class CreatePatientValidator : AbstractValidator<CreatePatientDto>
             .WithMessage("Gender must be Male, Female, or Other");
 
         RuleFor(x => x.Phone)
-            .NotEmpty().WithMessage("Phone number is required")
             .MaximumLength(20).WithMessage("Phone must not exceed 20 characters");
 
         RuleFor(x => x.Email)

@@ -1,31 +1,35 @@
 using AutoMapper;
 using ClinicManagementSystem.Application.Billings.Commands;
+using ClinicManagementSystem.Application.Common;
 using ClinicManagementSystem.Application.DTOs;
-using ClinicManagementSystem.Application.Exceptions;
 using ClinicManagementSystem.Domain.Entities;
 using ClinicManagementSystem.Domain.Enums;
 using ClinicManagementSystem.Domain.Interfaces;
+using ClinicManagementSystem.Application.Interfaces;
 using MediatR;
 
 namespace ClinicManagementSystem.Application.Billings.Commands;
 
-public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentCommand, PaymentResponseDto>
+public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentCommand, Result<PaymentResponseDto>>
 {
     private readonly IInvoiceRepository _invoiceRepository;
     private readonly IPaymentRepository _paymentRepository;
     private readonly IMapper _mapper;
+    private readonly INotificationService _notificationService;
 
-    public ProcessPaymentCommandHandler(IInvoiceRepository invoiceRepository, IPaymentRepository paymentRepository, IMapper mapper)
+    public ProcessPaymentCommandHandler(IInvoiceRepository invoiceRepository, IPaymentRepository paymentRepository, IMapper mapper, INotificationService notificationService)
     {
         _invoiceRepository = invoiceRepository;
         _paymentRepository = paymentRepository;
         _mapper = mapper;
+        _notificationService = notificationService;
     }
 
-    public async Task<PaymentResponseDto> Handle(ProcessPaymentCommand request, CancellationToken cancellationToken)
+    public async Task<Result<PaymentResponseDto>> Handle(ProcessPaymentCommand request, CancellationToken cancellationToken)
     {
-        var invoice = await _invoiceRepository.GetByIdAsync(request.InvoiceId)
-            ?? throw new NotFoundException(nameof(Invoice), request.InvoiceId);
+        var invoice = await _invoiceRepository.GetByIdAsync(request.InvoiceId);
+        if (invoice is null)
+            return Result<PaymentResponseDto>.Failure($"Invoice {request.InvoiceId} not found", "invoice_not_found");
 
         var payment = new Payment
         {
@@ -47,6 +51,8 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
         await _paymentRepository.SaveChangesAsync();
         await _invoiceRepository.SaveChangesAsync();
 
-        return _mapper.Map<PaymentResponseDto>(payment);
+        await _notificationService.NotifyInvoicePaidAsync(invoice.PatientId, request.InvoiceId, request.AmountPaid);
+
+        return Result<PaymentResponseDto>.Success(_mapper.Map<PaymentResponseDto>(payment));
     }
 }

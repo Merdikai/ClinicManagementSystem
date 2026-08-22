@@ -1,13 +1,13 @@
 using AutoMapper;
+using ClinicManagementSystem.Application.Common;
 using ClinicManagementSystem.Application.DTOs;
-using ClinicManagementSystem.Application.Exceptions;
 using ClinicManagementSystem.Domain.Entities;
 using ClinicManagementSystem.Domain.Interfaces;
 using MediatR;
 
 namespace ClinicManagementSystem.Application.VitalSigns.Commands;
 
-public class RecordVitalsCommandHandler : IRequestHandler<RecordVitalsCommand, VitalSignResponseDto>
+public class RecordVitalsCommandHandler : IRequestHandler<RecordVitalsCommand, Result<VitalSignResponseDto>>
 {
     private readonly IVitalSignRepository _vitalSignRepository;
     private readonly IAppointmentRepository _appointmentRepository;
@@ -23,10 +23,11 @@ public class RecordVitalsCommandHandler : IRequestHandler<RecordVitalsCommand, V
         _mapper = mapper;
     }
 
-    public async Task<VitalSignResponseDto> Handle(RecordVitalsCommand request, CancellationToken cancellationToken)
+    public async Task<Result<VitalSignResponseDto>> Handle(RecordVitalsCommand request, CancellationToken cancellationToken)
     {
-        var appointment = await _appointmentRepository.GetByIdAsync(request.AppointmentId)
-            ?? throw new NotFoundException(nameof(Appointment), request.AppointmentId);
+        var appointment = await _appointmentRepository.GetByIdAsync(request.AppointmentId);
+        if (appointment is null)
+            return Result<VitalSignResponseDto>.Failure($"Appointment {request.AppointmentId} not found", "appointment_not_found");
 
         var dto = new RecordVitalsDto(request.AppointmentId, request.SystolicBP, request.DiastolicBP,
             request.TemperatureC, request.HeartRateBpm, request.RespiratoryRate, request.WeightKg, request.HeightCm);
@@ -35,6 +36,6 @@ public class RecordVitalsCommandHandler : IRequestHandler<RecordVitalsCommand, V
 
         await _vitalSignRepository.AddAsync(vitalSign);
         await _vitalSignRepository.SaveChangesAsync();
-        return _mapper.Map<VitalSignResponseDto>(vitalSign);
+        return Result<VitalSignResponseDto>.Success(_mapper.Map<VitalSignResponseDto>(vitalSign));
     }
 }

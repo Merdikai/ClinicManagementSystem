@@ -18,6 +18,9 @@ public class PrescriptionRepository : IPrescriptionRepository
         => await _context.Prescriptions
             .Include(p => p.PrescriptionItems)
                 .ThenInclude(pi => pi.Medicine)
+            .Include(p => p.Consultation)
+                .ThenInclude(c => c.Appointment)
+                    .ThenInclude(a => a.Patient)
             .FirstOrDefaultAsync(p => p.Id == id);
 
     public async Task AddAsync(Prescription prescription)

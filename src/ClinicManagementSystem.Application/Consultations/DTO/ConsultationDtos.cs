@@ -1,11 +1,24 @@
-﻿namespace ClinicManagementSystem.Application.DTOs;
+namespace ClinicManagementSystem.Application.DTOs;
 
-public record CreateConsultationDto(
-    Guid AppointmentId,
-    string Symptoms,
-    string Diagnosis,
-    string ClinicalNotes
-);
+public class CreateConsultationDto
+{
+    public Guid AppointmentId { get; set; }
+    public string Symptoms { get; set; } = string.Empty;
+    public string Diagnosis { get; set; } = string.Empty;
+    public string ClinicalNotes { get; set; } = string.Empty;
+    public string? PrescriptionNotes { get; set; }
+    public List<CreatePrescriptionItemDto>? PrescriptionItems { get; set; }
+
+    public CreateConsultationDto() { }
+
+    public CreateConsultationDto(Guid appointmentId, string symptoms, string diagnosis, string clinicalNotes)
+    {
+        AppointmentId = appointmentId;
+        Symptoms = symptoms;
+        Diagnosis = diagnosis;
+        ClinicalNotes = clinicalNotes;
+    }
+}
 
 public class ConsultationResponseDto
 {

@@ -1,3 +1,4 @@
+﻿using ClinicManagementSystem.Application.Common;
 using ClinicManagementSystem.Application.DTOs;
 using MediatR;
 
@@ -13,4 +14,4 @@ public record CreatePatientCommand(
     string Address,
     string BloodGroup,
     string EmergencyContact
-) : IRequest<PatientResponseDto>;
+) : IRequest<Result<PatientResponseDto>>;

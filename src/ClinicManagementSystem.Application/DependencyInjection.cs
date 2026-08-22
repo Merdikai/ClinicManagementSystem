@@ -1,4 +1,4 @@
-﻿using ClinicManagementSystem.Application.Interfaces;
+using ClinicManagementSystem.Application.Interfaces;
 using ClinicManagementSystem.Application.Services;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,6 +19,7 @@ public static class DependencyInjection
             cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
             cfg.AddOpenBehavior(typeof(ClinicManagementSystem.Application.Behaviors.LoggingBehavior<,>));
             cfg.AddOpenBehavior(typeof(ClinicManagementSystem.Application.Behaviors.ValidationBehavior<,>));
+            cfg.AddOpenBehavior(typeof(ClinicManagementSystem.Application.Behaviors.PerformanceBehavior<,>));
         });
 
         // FluentValidation

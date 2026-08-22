@@ -1,6 +1,8 @@
 using AutoMapper;
 using ClinicManagementSystem.Application.Billings.Commands;
+using ClinicManagementSystem.Application.Common;
 using ClinicManagementSystem.Application.DTOs;
+using ClinicManagementSystem.Application.Interfaces;
 using ClinicManagementSystem.Domain.Entities;
 using ClinicManagementSystem.Domain.Enums;
 using ClinicManagementSystem.Domain.Interfaces;
@@ -8,9 +10,7 @@ using MediatR;
 
 namespace ClinicManagementSystem.Application.Billings.Commands;
 
-using ClinicManagementSystem.Application.Interfaces;
-
-public class CreateInvoiceCommandHandler : IRequestHandler<CreateInvoiceCommand, InvoiceResponseDto>
+public class CreateInvoiceCommandHandler : IRequestHandler<CreateInvoiceCommand, Result<InvoiceResponseDto>>
 {
     private readonly IInvoiceRepository _invoiceRepository;
     private readonly IMapper _mapper;
@@ -23,7 +23,7 @@ public class CreateInvoiceCommandHandler : IRequestHandler<CreateInvoiceCommand,
         _linkGenerator = linkGenerator;
     }
 
-    public async Task<InvoiceResponseDto> Handle(CreateInvoiceCommand request, CancellationToken cancellationToken)
+    public async Task<Result<InvoiceResponseDto>> Handle(CreateInvoiceCommand request, CancellationToken cancellationToken)
     {
         var invoice = new Invoice
         {
@@ -54,7 +54,7 @@ public class CreateInvoiceCommandHandler : IRequestHandler<CreateInvoiceCommand,
 
         var dto = _mapper.Map<InvoiceResponseDto>(invoice);
         dto.Links = _linkGenerator.GenerateInvoiceLinks(invoice.Id);
-        return dto;
+        return Result<InvoiceResponseDto>.Success(dto);
     }
 
     private static string GenerateInvoiceNumber()

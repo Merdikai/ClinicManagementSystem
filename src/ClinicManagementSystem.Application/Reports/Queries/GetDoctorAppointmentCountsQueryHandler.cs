@@ -16,16 +16,23 @@ public class GetDoctorAppointmentCountsQueryHandler : IRequestHandler<GetDoctorA
 
     public async Task<IEnumerable<DoctorAppointmentCountDto>> Handle(GetDoctorAppointmentCountsQuery request, CancellationToken cancellationToken)
     {
-        return await _context.Appointments
+        var appointments = await _context.Appointments
             .Include(a => a.Doctor)
-            .Where(a => a.ScheduledDateTime >= request.StartDate && a.ScheduledDateTime <= request.EndDate && !a.IsDeleted)
-            .GroupBy(a => new { a.Doctor.FirstName, a.Doctor.LastName })
+            .Where(a => a.ScheduledDateTime >= request.StartDate && a.ScheduledDateTime <= request.EndDate && !a.IsDeleted && a.Doctor != null)
+            .Select(a => new {
+                DoctorName = (a.Doctor.FirstName + " " + a.Doctor.LastName).Trim(),
+                IsCompleted = a.Status == Domain.Enums.AppointmentStatus.Completed
+            })
+            .ToListAsync(cancellationToken);
+
+        return appointments
+            .GroupBy(a => a.DoctorName)
             .Select(g => new DoctorAppointmentCountDto(
-                $"{g.Key.FirstName} {g.Key.LastName}",
+                g.Key,
                 g.Count(),
-                g.Count(a => a.Status == Domain.Enums.AppointmentStatus.Completed)
+                g.Count(a => a.IsCompleted)
             ))
             .OrderByDescending(d => d.AppointmentCount)
-            .ToListAsync(cancellationToken);
+            .ToList();
     }
 }

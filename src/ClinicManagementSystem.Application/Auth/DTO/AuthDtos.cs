@@ -1,6 +1,6 @@
-﻿namespace ClinicManagementSystem.Application.DTOs;
+namespace ClinicManagementSystem.Application.DTOs;
 
-public record RegisterUserDto(string Username, string Email, string Password, string FirstName, string LastName, string Role, string? PhoneNumber);
+public record RegisterUserDto(string Username, string Email, string Password, string FirstName, string LastName, string? PhoneNumber);
 public record LoginDto(string Username, string Password);
 
 public class AuthResponseDto

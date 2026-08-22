@@ -1,21 +1,16 @@
-﻿using Asp.Versioning;
 using ClinicManagementSystem.Application.DTOs;
 using ClinicManagementSystem.Application.VitalSigns.Commands;
 using ClinicManagementSystem.Application.VitalSigns.Queries;
 using MediatR;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
-using ClinicManagementSystem.API.Constants;
-using Microsoft.AspNetCore.RateLimiting;
+using Asp.Versioning;
 
 namespace ClinicManagementSystem.API.Controllers;
 
 [ApiController]
 [ApiVersion("1.0")]
-[Route("api/v{version:apiVersion}/vitals")]
-[Authorize(Roles = "Nurse,Doctor,Admin")]
-[EnableRateLimiting(RateLimitingConstants.StaffPolicy)]
+[Route("api/v{version:apiVersion}/vital-signs")]
+[Tags("Vital Signs")]
 public class VitalSignsController : ControllerBase
 {
     private readonly ISender _sender;
@@ -26,13 +21,11 @@ public class VitalSignsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Nurse,Admin")]
-    [EndpointSummary("Record vital signs")]
+    [EndpointSummary("Record patient vital signs for an appointment")]
     [ProducesResponseType(typeof(VitalSignResponseDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Record([FromBody] RecordVitalsDto dto)
+    public async Task<IActionResult> RecordVitals([FromBody] RecordVitalsDto dto, [FromQuery] Guid? nurseId)
     {
-        var nurseId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
         var command = new RecordVitalsCommand(
             dto.AppointmentId,
             dto.SystolicBP,
@@ -42,22 +35,24 @@ public class VitalSignsController : ControllerBase
             dto.RespiratoryRate,
             dto.WeightKg,
             dto.HeightCm,
-            nurseId
+            (nurseId.HasValue && nurseId.Value != Guid.Empty) ? nurseId.Value : Guid.NewGuid());
+
+        var result = await _sender.Send(command);
+        return result.Match<IActionResult>(
+            onSuccess: vitals => CreatedAtAction(nameof(GetByAppointmentId), new { appointmentId = dto.AppointmentId }, vitals),
+            onFailure: (error, code) => BadRequest(new ProblemDetails { Title = "Record Vitals Failed", Detail = error, Status = 400 })
         );
-        var vitals = await _sender.Send(command);
-        return Created(string.Empty, vitals);
     }
 
     [HttpGet("appointment/{appointmentId:guid}")]
     [EndpointSummary("Get vital signs for an appointment")]
     [ProducesResponseType(typeof(VitalSignResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetByAppointment(Guid appointmentId)
+    public async Task<IActionResult> GetByAppointmentId(Guid appointmentId)
     {
-        var vitals = await _sender.Send(new GetVitalSignsByAppointmentIdQuery(appointmentId));
-        if (vitals is null)
-            return NotFound(new ProblemDetails { Title = "Not Found", Detail = $"Vital signs for appointment {appointmentId} not found", Status = 404 });
-
-        return Ok(vitals);
+        var result = await _sender.Send(new GetVitalSignsByAppointmentIdQuery(appointmentId));
+        if (result is null)
+            return NotFound(new ProblemDetails { Title = "Not Found", Detail = "No vital signs recorded for this appointment", Status = 404 });
+        return Ok(result);
     }
 }

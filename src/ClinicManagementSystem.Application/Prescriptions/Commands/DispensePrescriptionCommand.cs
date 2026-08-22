@@ -1,4 +1,4 @@
-﻿using ClinicManagementSystem.Application.Common;
+using ClinicManagementSystem.Application.Common;
 using ClinicManagementSystem.Application.DTOs;
 using ClinicManagementSystem.Domain.Interfaces;
 using MediatR;
@@ -57,6 +57,8 @@ public class DispensePrescriptionCommandHandler : IRequestHandler<DispensePrescr
                 dispensedQuantity == item.Quantity
             ));
         }
+
+        await _medicineRepository.SaveChangesAsync();
 
         return Result<DispenseResponseDto>.Success(new DispenseResponseDto(
             prescription.Id,

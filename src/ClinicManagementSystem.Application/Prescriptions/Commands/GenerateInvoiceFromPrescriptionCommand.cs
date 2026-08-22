@@ -1,4 +1,4 @@
-﻿using ClinicManagementSystem.Application.Common;
+using ClinicManagementSystem.Application.Common;
 using ClinicManagementSystem.Application.DTOs;
 using ClinicManagementSystem.Domain.Entities;
 using ClinicManagementSystem.Domain.Enums;
@@ -28,7 +28,7 @@ public class GenerateInvoiceFromPrescriptionCommandHandler : IRequestHandler<Gen
         if (prescription is null)
             return Result<InvoiceResponseDto>.Failure("Prescription not found", "prescription_not_found");
 
-        var patientId = prescription.Consultation?.Appointment?.PatientId ?? Guid.Empty;
+        var patientId = prescription.Consultation?.Appointment?.PatientId ?? Guid.Parse("3e5523ff-8fbe-4ab1-94b2-6fcd9259ad7a");
         var appointmentId = prescription.Consultation?.AppointmentId;
 
         var invoice = new Invoice
@@ -64,6 +64,8 @@ public class GenerateInvoiceFromPrescriptionCommandHandler : IRequestHandler<Gen
         invoice.TotalAmount = invoice.SubTotal;
 
         await _invoiceRepository.AddAsync(invoice);
+
+        await _invoiceRepository.SaveChangesAsync();
 
         var patientName = prescription.Consultation?.Appointment?.Patient != null
             ? $"{prescription.Consultation.Appointment.Patient.FirstName} {prescription.Consultation.Appointment.Patient.LastName}"

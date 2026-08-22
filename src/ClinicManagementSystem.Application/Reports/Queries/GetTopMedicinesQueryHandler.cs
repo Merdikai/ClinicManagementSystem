@@ -16,9 +16,19 @@ public class GetTopMedicinesQueryHandler : IRequestHandler<GetTopMedicinesQuery,
 
     public async Task<IEnumerable<TopMedicineDto>> Handle(GetTopMedicinesQuery request, CancellationToken cancellationToken)
     {
-        return await _context.PrescriptionItems
+        var items = await _context.PrescriptionItems
             .Include(pi => pi.Medicine)
-            .GroupBy(pi => new { pi.Medicine.Name, pi.Medicine.Code })
+            .Where(pi => pi.Medicine != null)
+            .Select(pi => new {
+                pi.Medicine.Name,
+                pi.Medicine.Code,
+                pi.Quantity,
+                pi.UnitPrice
+            })
+            .ToListAsync(cancellationToken);
+
+        return items
+            .GroupBy(pi => new { pi.Name, pi.Code })
             .Select(g => new TopMedicineDto(
                 g.Key.Name,
                 g.Key.Code,
@@ -27,6 +37,6 @@ public class GetTopMedicinesQueryHandler : IRequestHandler<GetTopMedicinesQuery,
             ))
             .OrderByDescending(m => m.TotalRevenue)
             .Take(request.Count)
-            .ToListAsync(cancellationToken);
+            .ToList();
     }
 }

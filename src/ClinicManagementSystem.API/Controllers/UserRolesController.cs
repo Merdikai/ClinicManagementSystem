@@ -1,4 +1,4 @@
-﻿using Asp.Versioning;
+using Asp.Versioning;
 using ClinicManagementSystem.Application.DTOs;
 using ClinicManagementSystem.Application.UserRoles.Commands;
 using ClinicManagementSystem.Application.UserRoles.Queries;
@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ClinicManagementSystem.API.Controllers;
+
+public record AssignRoleRequest(string RoleName);
 
 [ApiController]
 [ApiVersion("1.0")]
@@ -26,8 +28,12 @@ public class UserRolesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> AssignRole(Guid userId, [FromBody] string roleName)
+    public async Task<IActionResult> AssignRole(Guid userId, [FromBody] AssignRoleRequest request)
     {
+        var roleName = request?.RoleName;
+        if (string.IsNullOrWhiteSpace(roleName))
+            return BadRequest(new ProblemDetails { Title = "Validation Error", Detail = "RoleName is required", Status = 400 });
+
         var result = await _sender.Send(new AssignRoleCommand(userId, roleName));
 
         return result.Match<IActionResult>(

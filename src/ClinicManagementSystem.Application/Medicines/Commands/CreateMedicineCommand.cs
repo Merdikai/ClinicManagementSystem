@@ -1,4 +1,5 @@
-﻿using ClinicManagementSystem.Application.DTOs;
+using ClinicManagementSystem.Application.Common;
+using ClinicManagementSystem.Application.DTOs;
 using MediatR;
 
 namespace ClinicManagementSystem.Application.Medicines.Commands;
@@ -11,4 +12,4 @@ public record CreateMedicineCommand(
     decimal UnitPrice,
     DateTime? ExpiryDate = null,
     string BatchNumber = ""
-) : IRequest<MedicineResponseDto>;
+) : IRequest<Result<MedicineResponseDto>>;

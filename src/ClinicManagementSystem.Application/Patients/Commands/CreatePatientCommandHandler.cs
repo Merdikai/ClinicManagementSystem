@@ -1,14 +1,14 @@
 using AutoMapper;
+using ClinicManagementSystem.Application.Common;
 using ClinicManagementSystem.Application.DTOs;
+using ClinicManagementSystem.Application.Interfaces;
 using ClinicManagementSystem.Domain.Entities;
 using ClinicManagementSystem.Domain.Interfaces;
 using MediatR;
 
 namespace ClinicManagementSystem.Application.Patients.Commands;
 
-using ClinicManagementSystem.Application.Interfaces;
-
-public class CreatePatientCommandHandler : IRequestHandler<CreatePatientCommand, PatientResponseDto>
+public class CreatePatientCommandHandler : IRequestHandler<CreatePatientCommand, Result<PatientResponseDto>>
 {
     private readonly IPatientRepository _patientRepository;
     private readonly IMapper _mapper;
@@ -21,7 +21,7 @@ public class CreatePatientCommandHandler : IRequestHandler<CreatePatientCommand,
         _linkGenerator = linkGenerator;
     }
 
-    public async Task<PatientResponseDto> Handle(CreatePatientCommand request, CancellationToken cancellationToken)
+    public async Task<Result<PatientResponseDto>> Handle(CreatePatientCommand request, CancellationToken cancellationToken)
     {
         var dto = new CreatePatientDto(request.FirstName, request.LastName, request.DateOfBirth,
             request.Gender, request.Phone, request.Email, request.Address, request.BloodGroup, request.EmergencyContact);
@@ -32,7 +32,7 @@ public class CreatePatientCommandHandler : IRequestHandler<CreatePatientCommand,
         await _patientRepository.SaveChangesAsync();
         var responseDto = _mapper.Map<PatientResponseDto>(patient);
         responseDto.Links = _linkGenerator.GeneratePatientLinks(patient.Id);
-        return responseDto;
+        return Result<PatientResponseDto>.Success(responseDto);
     }
 
     private static string GenerateMRN()
