@@ -27,13 +27,13 @@ public static class DbInitializer
         // 2. Ensure Default Users for all Roles
         var defaultUsers = new[]
         {
-            new { Username = "admin", Email = "admin@clinic.com", First = "System", Last = "Administrator", Role = "Admin", Pass = "Admin@123!", Phone = "+15550000000" },
-            new { Username = "dr.smith", Email = "dr.smith@clinic.com", First = "John", Last = "Smith", Role = "Doctor", Pass = "Doctor@123!", Phone = "+15551112222" },
-            new { Username = "nurse.joy", Email = "nurse.joy@clinic.com", First = "Joy", Last = "Nurse", Role = "Nurse", Pass = "Nurse@123!", Phone = "+15552223333" },
-            new { Username = "receptionist.clara", Email = "clara.reception@clinic.com", First = "Clara", Last = "Receptionist", Role = "Receptionist", Pass = "Receptionist@123!", Phone = "+15553334444" },
-            new { Username = "pharmacist.sam", Email = "sam.pharma@clinic.com", First = "Sam", Last = "Pharmacist", Role = "Pharmacist", Pass = "Pharmacist@123!", Phone = "+15554445555" },
-            new { Username = "accountant.dave", Email = "dave.finance@clinic.com", First = "Dave", Last = "Accountant", Role = "Accountant", Pass = "Accountant@123!", Phone = "+15555556666" },
-            new { Username = "patient.alice", Email = "alice.patient@clinic.com", First = "Alice", Last = "Patient", Role = "Patient", Pass = "Patient@123!", Phone = "+15556667777" }
+            new { Username = "admin", Email = "admin@clinic.com", First = "System", Last = "Administrator", Role = "Admin", Pass = "Admin@123456!", Phone = "+15550000000" },
+            new { Username = "dr.smith", Email = "dr.smith@clinic.com", First = "John", Last = "Smith", Role = "Doctor", Pass = "Doctor@12345!", Phone = "+15551112222" },
+            new { Username = "nurse.joy", Email = "nurse.joy@clinic.com", First = "Joy", Last = "Nurse", Role = "Nurse", Pass = "Nurse@123456!", Phone = "+15552223333" },
+            new { Username = "receptionist.clara", Email = "clara.reception@clinic.com", First = "Clara", Last = "Receptionist", Role = "Receptionist", Pass = "Receptionist@12!", Phone = "+15553334444" },
+            new { Username = "pharmacist.sam", Email = "sam.pharma@clinic.com", First = "Sam", Last = "Pharmacist", Role = "Pharmacist", Pass = "Pharmacist@1!", Phone = "+15554445555" },
+            new { Username = "accountant.dave", Email = "dave.finance@clinic.com", First = "Dave", Last = "Accountant", Role = "Accountant", Pass = "Accountant@1!", Phone = "+15555556666" },
+            new { Username = "patient.alice", Email = "alice.patient@clinic.com", First = "Alice", Last = "Patient", Role = "Patient", Pass = "Patient@1234!", Phone = "+15556667777" }
         };
 
         foreach (var def in defaultUsers)
