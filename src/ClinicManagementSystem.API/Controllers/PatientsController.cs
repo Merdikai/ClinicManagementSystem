@@ -112,18 +112,27 @@ public class PatientsController : ControllerBase
     [EndpointSummary("Update an existing patient")]
     [ProducesResponseType(typeof(PatientResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> UpdatePatient(Guid id, [FromBody] CreatePatientDto dto, [FromServices] IClinicDbContext context)
+    public async Task<IActionResult> UpdatePatient(Guid id, [FromBody] CreatePatientDto dto, [FromServices] IClinicDbContext context, [FromServices] Microsoft.Extensions.Caching.Hybrid.HybridCache cache)
     {
         var patient = await context.Patients.FindAsync(id);
         if (patient == null) return NotFound(new ProblemDetails { Title = "Not Found", Detail = $"Patient {id} not found", Status = 404 });
 
-        if (!string.IsNullOrEmpty(dto.FirstName)) patient.FirstName = dto.FirstName;
-        if (!string.IsNullOrEmpty(dto.LastName)) patient.LastName = dto.LastName;
-        if (!string.IsNullOrEmpty(dto.Phone)) patient.Phone = dto.Phone;
-        if (!string.IsNullOrEmpty(dto.Email)) patient.Email = dto.Email;
-        if (!string.IsNullOrEmpty(dto.Address)) patient.Address = dto.Address;
-        if (!string.IsNullOrEmpty(dto.EmergencyContact)) patient.EmergencyContact = dto.EmergencyContact;
+        if (!string.IsNullOrWhiteSpace(dto.FirstName)) patient.FirstName = dto.FirstName.Trim();
+        if (!string.IsNullOrWhiteSpace(dto.LastName)) patient.LastName = dto.LastName.Trim();
+        if (!string.IsNullOrWhiteSpace(dto.Phone)) patient.Phone = dto.Phone.Trim();
+        if (!string.IsNullOrWhiteSpace(dto.Email)) patient.Email = dto.Email.Trim();
+        if (dto.Address != null) patient.Address = dto.Address.Trim();
+        if (!string.IsNullOrWhiteSpace(dto.BloodGroup)) patient.BloodGroup = dto.BloodGroup.Trim();
+        if (dto.DateOfBirth != default) patient.DateOfBirth = dto.DateOfBirth;
+        if (!string.IsNullOrWhiteSpace(dto.Gender)) patient.Gender = dto.Gender.Trim();
+        if (dto.EmergencyContact != null) patient.EmergencyContact = dto.EmergencyContact.Trim();
+        
         await context.SaveChangesAsync();
+
+        try {
+            await cache.RemoveAsync($"patient_v1:{id}");
+            await cache.RemoveByTagAsync(["patients"]);
+        } catch { }
 
         return Ok(new PatientResponseDto {
             Id = patient.Id,
@@ -134,7 +143,9 @@ public class PatientsController : ControllerBase
             Gender = patient.Gender,
             Phone = patient.Phone,
             Email = patient.Email,
+            Address = patient.Address,
             BloodGroup = patient.BloodGroup,
+            EmergencyContact = patient.EmergencyContact,
             RegisteredAt = patient.RegisteredAt
         });
     }
@@ -143,13 +154,19 @@ public class PatientsController : ControllerBase
     [EndpointSummary("Delete a patient")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DeletePatient(Guid id, [FromServices] IClinicDbContext context)
+    public async Task<IActionResult> DeletePatient(Guid id, [FromServices] IClinicDbContext context, [FromServices] Microsoft.Extensions.Caching.Hybrid.HybridCache cache)
     {
         var patient = await context.Patients.FindAsync(id);
         if (patient == null) return NotFound(new ProblemDetails { Title = "Not Found", Detail = $"Patient {id} not found", Status = 404 });
 
         context.Patients.Remove(patient);
         await context.SaveChangesAsync();
+
+        try {
+            await cache.RemoveAsync($"patient_v1:{id}");
+            await cache.RemoveByTagAsync(["patients"]);
+        } catch { }
+
         return NoContent();
     }
 

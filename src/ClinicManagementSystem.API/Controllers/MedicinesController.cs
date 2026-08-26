@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Asp.Versioning;
 using ClinicManagementSystem.API.Constants;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Caching.Hybrid;
 
 namespace ClinicManagementSystem.API.Controllers;
 
@@ -65,18 +66,28 @@ public class MedicinesController : ControllerBase
     [EndpointSummary("Update medicine details")]
     [ProducesResponseType(typeof(MedicineResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> UpdateMedicine(Guid id, [FromBody] CreateMedicineDto dto, [FromServices] IClinicDbContext context)
+    public async Task<IActionResult> UpdateMedicine(
+        Guid id, 
+        [FromBody] CreateMedicineDto dto, 
+        [FromServices] IClinicDbContext context,
+        [FromServices] HybridCache cache)
     {
         var medicine = await context.Medicines.FindAsync(id);
         if (medicine == null) return NotFound(new ProblemDetails { Title = "Not Found", Detail = $"Medicine {id} not found", Status = 404 });
 
-        if (!string.IsNullOrEmpty(dto.Name)) medicine.Name = dto.Name;
-        if (!string.IsNullOrEmpty(dto.Category)) medicine.Category = dto.Category;
-        medicine.UnitPrice = dto.UnitPrice;
-        if (dto.StockQuantity > 0) medicine.StockQuantity = dto.StockQuantity;
+        if (!string.IsNullOrWhiteSpace(dto.Name)) medicine.Name = dto.Name.Trim();
+        if (!string.IsNullOrWhiteSpace(dto.Code)) medicine.Code = dto.Code.Trim();
+        if (!string.IsNullOrWhiteSpace(dto.Category)) medicine.Category = dto.Category.Trim();
+        if (dto.UnitPrice > 0) medicine.UnitPrice = dto.UnitPrice;
+        if (dto.StockQuantity >= 0) medicine.StockQuantity = dto.StockQuantity;
         if (dto.ExpiryDate.HasValue) medicine.ExpiryDate = dto.ExpiryDate.Value;
-        if (!string.IsNullOrEmpty(dto.BatchNumber)) medicine.BatchNumber = dto.BatchNumber;
+        if (dto.BatchNumber != null) medicine.BatchNumber = dto.BatchNumber.Trim();
+        
         await context.SaveChangesAsync();
+
+        try {
+            await cache.RemoveByTagAsync("medicines");
+        } catch { }
 
         return Ok(new MedicineResponseDto {
             Id = medicine.Id,
@@ -94,13 +105,21 @@ public class MedicinesController : ControllerBase
     [EndpointSummary("Delete a medicine")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DeleteMedicine(Guid id, [FromServices] IClinicDbContext context)
+    public async Task<IActionResult> DeleteMedicine(
+        Guid id, 
+        [FromServices] IClinicDbContext context,
+        [FromServices] HybridCache cache)
     {
         var medicine = await context.Medicines.FindAsync(id);
         if (medicine == null) return NotFound(new ProblemDetails { Title = "Not Found", Detail = $"Medicine {id} not found", Status = 404 });
 
         context.Medicines.Remove(medicine);
         await context.SaveChangesAsync();
+
+        try {
+            await cache.RemoveByTagAsync("medicines");
+        } catch { }
+
         return NoContent();
     }
 
@@ -115,5 +134,5 @@ public class MedicinesController : ControllerBase
         return NoContent();
     }
 
-public record DispenseRequestDto(int? Quantity);
+    public record DispenseRequestDto(int? Quantity);
 }

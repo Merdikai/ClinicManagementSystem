@@ -1,4 +1,4 @@
-﻿using ClinicManagementSystem.Application.Common;
+using ClinicManagementSystem.Application.Common;
 using ClinicManagementSystem.Application.DTOs;
 using MediatR;
 
@@ -34,14 +34,17 @@ public class UploadPatientFileCommandHandler : IRequestHandler<UploadPatientFile
         if (!allowedExtensions.Contains(extension))
             return Result<FileUploadResponseDto>.Failure("File type not allowed", "invalid_file_type");
 
-        if (request.FileSize > 10 * 1024 * 1024) // 10MB limit
+        if (request.FileSize > 10 * 1024 * 1024)
             return Result<FileUploadResponseDto>.Failure("File too large (max 10MB)", "file_too_large");
 
         var patientFolder = Path.Combine(_uploadPath, request.PatientId.ToString());
         if (!Directory.Exists(patientFolder))
             Directory.CreateDirectory(patientFolder);
 
-        var savedFileName = $"{Guid.NewGuid()}{extension}";
+        // Sanitize and save as "{GUID}__{OriginalName}" to preserve the display name
+        var invalidChars = Path.GetInvalidFileNameChars();
+        var safeOriginal = string.Concat(request.FileName.Split(invalidChars));
+        var savedFileName = Guid.NewGuid().ToString() + "__" + safeOriginal;
         var filePath = Path.Combine(patientFolder, savedFileName);
 
         using (var stream = new FileStream(filePath, FileMode.Create))
@@ -51,6 +54,7 @@ public class UploadPatientFileCommandHandler : IRequestHandler<UploadPatientFile
 
         var response = new FileUploadResponseDto(
             Guid.NewGuid(),
+            savedFileName,
             request.FileName,
             request.ContentType,
             request.FileSize,

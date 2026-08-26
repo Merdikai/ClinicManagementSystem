@@ -77,3 +77,4 @@ secrets.json
 *.sqlite
 *.db
 postgres_data/
+src/ClinicManagementSystem.API/uploads/

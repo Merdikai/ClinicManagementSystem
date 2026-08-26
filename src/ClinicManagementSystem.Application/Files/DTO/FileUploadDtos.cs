@@ -1,9 +1,11 @@
-﻿namespace ClinicManagementSystem.Application.DTOs;
+namespace ClinicManagementSystem.Application.DTOs;
 
 public record FileUploadResponseDto(
     Guid Id,
     string FileName,
+    string OriginalFileName,
     string ContentType,
     long FileSizeBytes,
-    DateTime UploadedAt
+    DateTime UploadedAt,
+    string? DownloadUrl = null
 );
