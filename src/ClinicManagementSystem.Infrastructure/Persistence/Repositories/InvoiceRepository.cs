@@ -26,6 +26,7 @@ public class InvoiceRepository : IInvoiceRepository
             .Where(i => i.PatientId == patientId)
             .Include(i => i.LineItems)
             .Include(i => i.Payments)
+            .Include(i => i.Patient)
             .OrderByDescending(i => i.IssueDate)
             .ToListAsync();
 

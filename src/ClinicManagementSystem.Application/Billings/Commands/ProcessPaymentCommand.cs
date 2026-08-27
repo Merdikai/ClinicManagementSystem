@@ -8,5 +8,5 @@ public record ProcessPaymentCommand(
     Guid InvoiceId,
     decimal AmountPaid,
     string PaymentMethod,
-    string TransactionReference
+    string? TransactionReference
 ) : IRequest<Result<PaymentResponseDto>>;

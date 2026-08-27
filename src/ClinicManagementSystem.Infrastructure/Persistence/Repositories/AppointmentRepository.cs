@@ -59,6 +59,7 @@ public class AppointmentRepository : IAppointmentRepository
         var query = _context.Appointments
             .Include(a => a.Patient)
             .Include(a => a.Doctor)
+            .Include(a => a.VitalSign)
             .AsQueryable();
 
         if (startDate.HasValue)

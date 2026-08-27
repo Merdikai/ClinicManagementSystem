@@ -26,6 +26,16 @@ public class VitalSignsController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> RecordVitals([FromBody] RecordVitalsDto dto, [FromQuery] Guid? nurseId)
     {
+        Guid resolvedNurseId = (nurseId.HasValue && nurseId.Value != Guid.Empty) ? nurseId.Value : Guid.Empty;
+        if (resolvedNurseId == Guid.Empty)
+        {
+            var claim = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (Guid.TryParse(claim, out var parsedId))
+            {
+                resolvedNurseId = parsedId;
+            }
+        }
+
         var command = new RecordVitalsCommand(
             dto.AppointmentId,
             dto.SystolicBP,
@@ -35,7 +45,7 @@ public class VitalSignsController : ControllerBase
             dto.RespiratoryRate,
             dto.WeightKg,
             dto.HeightCm,
-            (nurseId.HasValue && nurseId.Value != Guid.Empty) ? nurseId.Value : Guid.NewGuid());
+            resolvedNurseId);
 
         var result = await _sender.Send(command);
         return result.Match<IActionResult>(

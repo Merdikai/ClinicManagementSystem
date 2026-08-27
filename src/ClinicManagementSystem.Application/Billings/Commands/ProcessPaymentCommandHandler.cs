@@ -31,15 +31,20 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
         if (invoice is null)
             return Result<PaymentResponseDto>.Failure($"Invoice {request.InvoiceId} not found", "invoice_not_found");
 
+        var refCode = !string.IsNullOrWhiteSpace(request.TransactionReference)
+            ? request.TransactionReference
+            : $"TXN-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid().ToString()[..6].ToUpper()}";
+
         var payment = new Payment
         {
             InvoiceId = request.InvoiceId,
             AmountPaid = request.AmountPaid,
-            PaymentMethod = request.PaymentMethod,
-            TransactionReference = request.TransactionReference
+            PaymentMethod = !string.IsNullOrWhiteSpace(request.PaymentMethod) ? request.PaymentMethod : "Cash",
+            TransactionReference = refCode
         };
 
         await _paymentRepository.AddAsync(payment);
+        invoice.Payments.Add(payment);
 
         var balance = invoice.BalanceDue;
         if (balance <= 0)

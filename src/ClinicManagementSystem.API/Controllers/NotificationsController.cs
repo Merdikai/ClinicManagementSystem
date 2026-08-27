@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ClinicManagementSystem.API.Controllers;
 
+public record BroadcastAlertRequest(string? Message, string? Title);
+
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/notifications")]
@@ -19,18 +21,23 @@ public class NotificationsController : ControllerBase
         _notificationService = notificationService;
     }
 
+    [AllowAnonymous]
     [HttpPost("test")]
-    public async Task<IActionResult> TestNotification()
+    public async Task<IActionResult> TestNotification([FromBody] BroadcastAlertRequest? request = null)
     {
-        var userId = Guid.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
-        var userName = User.Identity?.Name ?? "Unknown";
+        var userClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var userId = Guid.TryParse(userClaim, out var parsed) ? parsed : Guid.NewGuid();
+        var userName = User.Identity?.Name ?? "Admin";
+        var messageText = !string.IsNullOrWhiteSpace(request?.Message) 
+            ? request.Message 
+            : $"Broadcast alert issued by {userName}";
 
         await _notificationService.NotifyAppointmentBookedAsync(
             userId,
             Guid.NewGuid(),
-            $"Test notification for {userName}"
+            messageText
         );
 
-        return Ok(new { message = "Test notification sent" });
+        return Ok(new { message = "Broadcast notification sent successfully", text = messageText });
     }
 }

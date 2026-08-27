@@ -17,7 +17,8 @@ public class AutoMapperProfiles : Profile
         CreateMap<Appointment, AppointmentResponseDto>()
             .ForMember(dest => dest.PatientName, opt => opt.MapFrom(src => $"{src.Patient.FirstName} {src.Patient.LastName}"))
             .ForMember(dest => dest.DoctorName, opt => opt.MapFrom(src => $"{src.Doctor.FirstName} {src.Doctor.LastName}"))
-            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()));
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
+            .ForMember(dest => dest.VitalSigns, opt => opt.MapFrom(src => src.VitalSign));
 
         // ─── VitalSign ───
         CreateMap<RecordVitalsDto, VitalSign>();

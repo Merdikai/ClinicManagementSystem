@@ -42,8 +42,8 @@ public class InvoiceItemResponseDto
 public record ProcessPaymentDto(
     Guid InvoiceId,
     decimal AmountPaid,
-    string PaymentMethod,
-    string TransactionReference
+    string? PaymentMethod = "Cash",
+    string? TransactionReference = null
 );
 
 public class PaymentResponseDto

@@ -105,7 +105,7 @@ public class BillingController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ProcessPayment([FromBody] ProcessPaymentDto dto)
     {
-        var command = new ProcessPaymentCommand(dto.InvoiceId, dto.AmountPaid, dto.PaymentMethod, dto.TransactionReference);
+        var command = new ProcessPaymentCommand(dto.InvoiceId, dto.AmountPaid, dto.PaymentMethod ?? "Cash", dto.TransactionReference);
         var result = await _sender.Send(command);
 
         return result.Match<IActionResult>(
