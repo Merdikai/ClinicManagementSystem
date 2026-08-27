@@ -23,6 +23,10 @@ public interface IClinicDbContext
     DbSet<AuditLog> AuditLogs { get; }
     DbSet<RefreshToken> RefreshTokens { get; }
     DbSet<PasswordResetToken> PasswordResetTokens { get; }
-    
+    DbSet<LabTestTemplate> LabTestTemplates { get; }
+    DbSet<LabOrder> LabOrders { get; }
+    DbSet<LabOrderItem> LabOrderItems { get; }
+    DbSet<LabResult> LabResults { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

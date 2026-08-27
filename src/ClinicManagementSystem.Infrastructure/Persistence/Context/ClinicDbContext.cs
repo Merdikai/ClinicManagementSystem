@@ -32,7 +32,11 @@ public class ClinicDbContext : DbContext, IClinicDbContext
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
-    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+        public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+    public DbSet<LabTestTemplate> LabTestTemplates => Set<LabTestTemplate>();
+    public DbSet<LabOrder> LabOrders => Set<LabOrder>();
+    public DbSet<LabOrderItem> LabOrderItems => Set<LabOrderItem>();
+    public DbSet<LabResult> LabResults => Set<LabResult>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -77,3 +81,4 @@ public class ClinicDbContext : DbContext, IClinicDbContext
         return await base.SaveChangesAsync(cancellationToken);
     }
 }
+

@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
 using ClinicManagementSystem.Domain.Entities;
 using ClinicManagementSystem.Domain.Enums;
@@ -11,6 +11,7 @@ public static class DbInitializer
 {
     public static async Task SeedAsync(ClinicDbContext context)
     {
+        await SeedLabTestTemplatesAsync(context);
         // 1. Seed Roles if missing
         var roleNames = new[] { "Admin", "Doctor", "Nurse", "Receptionist", "Pharmacist", "Accountant", "Patient" };
         foreach (var roleName in roleNames)
@@ -158,4 +159,138 @@ public static class DbInitializer
         var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
         return Convert.ToBase64String(bytes);
     }
+
+    private static async Task SeedLabTestTemplatesAsync(ClinicDbContext context)
+    {
+        if (await context.LabTestTemplates.AnyAsync()) return;
+
+        var templates = new List<LabTestTemplate>
+        {
+            new LabTestTemplate
+            {
+                TestCode = "CBC",
+                TestName = "Complete Blood Count (CBC) with Differential",
+                Category = "Hematology",
+                Description = "Measures overall health and detects wide range of disorders including anemia and leukemia",
+                SampleType = "Whole Blood (EDTA)",
+                TurnaroundTimeHours = 4,
+                Price = 35.00m,
+                IsActive = true,
+                ParametersJson = @"[
+                    {""name"": ""Hemoglobin"", ""unit"": ""g/dL"", ""minRef"": 13.5, ""maxRef"": 17.5, ""normalText"": ""13.5 - 17.5 g/dL""},
+                    {""name"": ""WBC Count"", ""unit"": ""10^3/uL"", ""minRef"": 4.5, ""maxRef"": 11.0, ""normalText"": ""4.5 - 11.0 10^3/uL""},
+                    {""name"": ""RBC Count"", ""unit"": ""10^6/uL"", ""minRef"": 4.3, ""maxRef"": 5.9, ""normalText"": ""4.3 - 5.9 10^6/uL""},
+                    {""name"": ""Platelet Count"", ""unit"": ""10^3/uL"", ""minRef"": 150.0, ""maxRef"": 450.0, ""normalText"": ""150 - 450 10^3/uL""},
+                    {""name"": ""Hematocrit (Hct)"", ""unit"": ""%"", ""minRef"": 41.0, ""maxRef"": 50.0, ""normalText"": ""41.0 - 50.0 %""}
+                ]"
+            },
+            new LabTestTemplate
+            {
+                TestCode = "FBG",
+                TestName = "Fasting Blood Glucose",
+                Category = "Biochemistry",
+                Description = "Evaluates blood glucose levels after an overnight fast to screen for diabetes mellitus",
+                SampleType = "Serum / Plasma",
+                TurnaroundTimeHours = 2,
+                Price = 20.00m,
+                IsActive = true,
+                ParametersJson = @"[
+                    {""name"": ""Fasting Blood Sugar"", ""unit"": ""mg/dL"", ""minRef"": 70.0, ""maxRef"": 99.0, ""normalText"": ""70 - 99 mg/dL""}
+                ]"
+            },
+            new LabTestTemplate
+            {
+                TestCode = "LIPID",
+                TestName = "Comprehensive Lipid Profile",
+                Category = "Biochemistry",
+                Description = "Assesses risk of cardiovascular disease by measuring cholesterol fractions and triglycerides",
+                SampleType = "Serum",
+                TurnaroundTimeHours = 6,
+                Price = 45.00m,
+                IsActive = true,
+                ParametersJson = @"[
+                    {""name"": ""Total Cholesterol"", ""unit"": ""mg/dL"", ""minRef"": 125.0, ""maxRef"": 200.0, ""normalText"": ""< 200 mg/dL""},
+                    {""name"": ""Triglycerides"", ""unit"": ""mg/dL"", ""minRef"": 50.0, ""maxRef"": 150.0, ""normalText"": ""< 150 mg/dL""},
+                    {""name"": ""HDL Cholesterol"", ""unit"": ""mg/dL"", ""minRef"": 40.0, ""maxRef"": 90.0, ""normalText"": ""> 40 mg/dL""},
+                    {""name"": ""LDL Cholesterol"", ""unit"": ""mg/dL"", ""minRef"": 50.0, ""maxRef"": 100.0, ""normalText"": ""< 100 mg/dL""}
+                ]"
+            },
+            new LabTestTemplate
+            {
+                TestCode = "CMP",
+                TestName = "Comprehensive Metabolic Panel (CMP)",
+                Category = "Biochemistry",
+                Description = "Evaluates organ function, kidney/liver health, electrolyte levels, and fluid balance",
+                SampleType = "Serum",
+                TurnaroundTimeHours = 6,
+                Price = 60.00m,
+                IsActive = true,
+                ParametersJson = @"[
+                    {""name"": ""Sodium (Na)"", ""unit"": ""mEq/L"", ""minRef"": 135.0, ""maxRef"": 145.0, ""normalText"": ""135 - 145 mEq/L""},
+                    {""name"": ""Potassium (K)"", ""unit"": ""mEq/L"", ""minRef"": 3.5, ""maxRef"": 5.0, ""normalText"": ""3.5 - 5.0 mEq/L""},
+                    {""name"": ""Chloride (Cl)"", ""unit"": ""mEq/L"", ""minRef"": 96.0, ""maxRef"": 106.0, ""normalText"": ""96 - 106 mEq/L""},
+                    {""name"": ""Blood Urea Nitrogen (BUN)"", ""unit"": ""mg/dL"", ""minRef"": 7.0, ""maxRef"": 20.0, ""normalText"": ""7 - 20 mg/dL""},
+                    {""name"": ""Creatinine"", ""unit"": ""mg/dL"", ""minRef"": 0.6, ""maxRef"": 1.2, ""normalText"": ""0.6 - 1.2 mg/dL""},
+                    {""name"": ""Calcium"", ""unit"": ""mg/dL"", ""minRef"": 8.5, ""maxRef"": 10.2, ""normalText"": ""8.5 - 10.2 mg/dL""}
+                ]"
+            },
+            new LabTestTemplate
+            {
+                TestCode = "URINE",
+                TestName = "Routine Urinalysis (Macro & Microscopic)",
+                Category = "Urinalysis",
+                Description = "Screens for urinary tract infections, kidney disorders, and metabolic conditions",
+                SampleType = "Midstream Urine",
+                TurnaroundTimeHours = 2,
+                Price = 25.00m,
+                IsActive = true,
+                ParametersJson = @"[
+                    {""name"": ""Specific Gravity"", ""unit"": """", ""minRef"": 1.005, ""maxRef"": 1.030, ""normalText"": ""1.005 - 1.030""},
+                    {""name"": ""pH"", ""unit"": """", ""minRef"": 4.5, ""maxRef"": 8.0, ""normalText"": ""4.5 - 8.0""},
+                    {""name"": ""Protein"", ""unit"": """", ""minRef"": 0, ""maxRef"": 0, ""normalText"": ""Negative""},
+                    {""name"": ""Glucose"", ""unit"": """", ""minRef"": 0, ""maxRef"": 0, ""normalText"": ""Negative""},
+                    {""name"": ""Ketones"", ""unit"": """", ""minRef"": 0, ""maxRef"": 0, ""normalText"": ""Negative""},
+                    {""name"": ""Leukocyte Esterase"", ""unit"": """", ""minRef"": 0, ""maxRef"": 0, ""normalText"": ""Negative""}
+                ]"
+            },
+            new LabTestTemplate
+            {
+                TestCode = "LFT",
+                TestName = "Liver Function Panel (LFT)",
+                Category = "Biochemistry",
+                Description = "Screens for liver damage, hepatitis, and tracks response to medication therapies",
+                SampleType = "Serum",
+                TurnaroundTimeHours = 4,
+                Price = 50.00m,
+                IsActive = true,
+                ParametersJson = @"[
+                    {""name"": ""ALT (Alanine Transaminase)"", ""unit"": ""U/L"", ""minRef"": 7.0, ""maxRef"": 56.0, ""normalText"": ""7 - 56 U/L""},
+                    {""name"": ""AST (Aspartate Transaminase)"", ""unit"": ""U/L"", ""minRef"": 10.0, ""maxRef"": 40.0, ""normalText"": ""10 - 40 U/L""},
+                    {""name"": ""ALP (Alkaline Phosphatase)"", ""unit"": ""U/L"", ""minRef"": 44.0, ""maxRef"": 147.0, ""normalText"": ""44 - 147 U/L""},
+                    {""name"": ""Total Bilirubin"", ""unit"": ""mg/dL"", ""minRef"": 0.1, ""maxRef"": 1.2, ""normalText"": ""0.1 - 1.2 mg/dL""},
+                    {""name"": ""Albumin"", ""unit"": ""g/dL"", ""minRef"": 3.5, ""maxRef"": 5.0, ""normalText"": ""3.5 - 5.0 g/dL""}
+                ]"
+            },
+            new LabTestTemplate
+            {
+                TestCode = "TSH",
+                TestName = "Thyroid Stimulating Hormone (TSH) & Free T4",
+                Category = "Endocrinology",
+                Description = "Assesses thyroid gland function to detect hypothyroidism or hyperthyroidism",
+                SampleType = "Serum",
+                TurnaroundTimeHours = 12,
+                Price = 40.00m,
+                IsActive = true,
+                ParametersJson = @"[
+                    {""name"": ""TSH"", ""unit"": ""uIU/mL"", ""minRef"": 0.4, ""maxRef"": 4.0, ""normalText"": ""0.4 - 4.0 uIU/mL""},
+                    {""name"": ""Free T4"", ""unit"": ""ng/dL"", ""minRef"": 0.8, ""maxRef"": 1.8, ""normalText"": ""0.8 - 1.8 ng/dL""}
+                ]"
+            }
+        };
+
+        context.LabTestTemplates.AddRange(templates);
+        await context.SaveChangesAsync();
+    }
 }
+
+

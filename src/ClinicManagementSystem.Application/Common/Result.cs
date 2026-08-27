@@ -1,4 +1,4 @@
-namespace ClinicManagementSystem.Application.Common;
+﻿namespace ClinicManagementSystem.Application.Common;
 
 public class Result<T>
 {
@@ -16,7 +16,7 @@ public class Result<T>
     }
 
     public static Result<T> Success(T value) => new(true, value, null, null);
-    public static Result<T> Failure(string error, string errorCode) => new(false, default, error, errorCode);
+    public static Result<T> Failure(string error, string errorCode = "ERROR") => new(false, default, error, errorCode);
 
     public TResult Match<TResult>(Func<T, TResult> onSuccess, Func<string, string, TResult> onFailure)
     {
