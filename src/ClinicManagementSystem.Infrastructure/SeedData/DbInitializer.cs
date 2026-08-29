@@ -1,4 +1,4 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using System.Text;
 using ClinicManagementSystem.Domain.Entities;
 using ClinicManagementSystem.Domain.Enums;
@@ -13,7 +13,7 @@ public static class DbInitializer
     {
         await SeedLabTestTemplatesAsync(context);
         // 1. Seed Roles if missing
-        var roleNames = new[] { "Admin", "Doctor", "Nurse", "Receptionist", "Pharmacist", "Accountant", "Patient" };
+        var roleNames = new[] { "Admin", "Doctor", "Nurse", "Receptionist", "Pharmacist", "Accountant", "Patient", "LabTechnician" };
         foreach (var roleName in roleNames)
         {
             if (!await context.Roles.AnyAsync(r => r.Name == roleName))
@@ -34,7 +34,8 @@ public static class DbInitializer
             new { Username = "receptionist.clara", Email = "clara.reception@clinic.com", First = "Clara", Last = "Receptionist", Role = "Receptionist", Pass = "Receptionist@12!", Phone = "+15553334444" },
             new { Username = "pharmacist.sam", Email = "sam.pharma@clinic.com", First = "Sam", Last = "Pharmacist", Role = "Pharmacist", Pass = "Pharmacist@1!", Phone = "+15554445555" },
             new { Username = "accountant.dave", Email = "dave.finance@clinic.com", First = "Dave", Last = "Accountant", Role = "Accountant", Pass = "Accountant@1!", Phone = "+15555556666" },
-            new { Username = "patient.alice", Email = "alice.patient@clinic.com", First = "Alice", Last = "Patient", Role = "Patient", Pass = "Patient@1234!", Phone = "+15556667777" }
+            new { Username = "patient.alice", Email = "alice.patient@clinic.com", First = "Alice", Last = "Patient", Role = "Patient", Pass = "Patient@1234!", Phone = "+15556667777" },
+            new { Username = "lab.tech", Email = "lab.tech@clinic.com", First = "Leo", Last = "Technician", Role = "LabTechnician", Pass = "LabTech@123!", Phone = "+15557778888" }
         };
 
         foreach (var def in defaultUsers)

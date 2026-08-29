@@ -1,4 +1,5 @@
-﻿using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
+using Asp.Versioning;
 using ClinicManagementSystem.API.Constants;
 using ClinicManagementSystem.Application.Laboratories.DTOs;
 using ClinicManagementSystem.Application.Laboratories.Queries;
@@ -12,6 +13,7 @@ namespace ClinicManagementSystem.API.Controllers;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/lab-tests")]
 [Tags("Laboratory Test Catalog")]
+[Authorize(Roles = "Admin,Doctor,LabTechnician")]
 [EnableRateLimiting(RateLimitingConstants.StaffPolicy)]
 public class LabTestsController : ControllerBase
 {

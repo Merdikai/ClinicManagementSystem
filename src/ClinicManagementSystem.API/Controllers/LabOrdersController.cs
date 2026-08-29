@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Asp.Versioning;
 using ClinicManagementSystem.API.Constants;
 using ClinicManagementSystem.Application.Common;
@@ -16,6 +17,7 @@ namespace ClinicManagementSystem.API.Controllers;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/lab-orders")]
 [Tags("Laboratory Orders")]
+[Authorize(Roles = "Admin,Doctor,LabTechnician")]
 [EnableRateLimiting(RateLimitingConstants.StaffPolicy)]
 public class LabOrdersController : ControllerBase
 {
