@@ -10,6 +10,8 @@ public class AppointmentConfiguration : IEntityTypeConfiguration<Appointment>
     {
         builder.HasKey(a => a.Id);
 
+        builder.Ignore(a => a.VitalSign);
+
         builder.HasOne(a => a.Patient)
             .WithMany(p => p.Appointments)
             .HasForeignKey(a => a.PatientId)
@@ -19,6 +21,11 @@ public class AppointmentConfiguration : IEntityTypeConfiguration<Appointment>
             .WithMany()
             .HasForeignKey(a => a.DoctorId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasMany(a => a.VitalSigns)
+            .WithOne(vs => vs.Appointment)
+            .HasForeignKey(vs => vs.AppointmentId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.Property(a => a.Status)
             .HasConversion<string>()

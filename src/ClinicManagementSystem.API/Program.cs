@@ -1,4 +1,4 @@
-﻿using ClinicManagementSystem.Application;
+using ClinicManagementSystem.Application;
 using ClinicManagementSystem.Infrastructure;
 using ClinicManagementSystem.Infrastructure.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
@@ -33,6 +33,8 @@ builder.Services.AddDbContext<ClinicDbContext>(options =>
 // ─── Application & Infrastructure Services ───
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ClinicManagementSystem.Application.Interfaces.ICurrentUserService, ClinicManagementSystem.API.Services.CurrentUserService>();
 
 // ─── CORS ───
 builder.Services.AddCors(options =>

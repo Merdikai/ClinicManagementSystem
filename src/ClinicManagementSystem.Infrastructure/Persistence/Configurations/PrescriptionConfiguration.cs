@@ -17,5 +17,22 @@ public class PrescriptionConfiguration : IEntityTypeConfiguration<Prescription>
 
         builder.Property(p => p.Notes)
             .HasMaxLength(1000);
+
+        builder.Property(p => p.Status)
+            .IsRequired()
+            .HasMaxLength(50);
+
+        builder.Property(p => p.VerificationNotes)
+            .HasMaxLength(1000);
+
+        builder.HasOne(p => p.DispensedByUser)
+            .WithMany()
+            .HasForeignKey(p => p.DispensedByUserId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasOne(p => p.Invoice)
+            .WithMany()
+            .HasForeignKey(p => p.InvoiceId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

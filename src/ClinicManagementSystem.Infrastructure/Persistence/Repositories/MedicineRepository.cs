@@ -28,8 +28,11 @@ public class MedicineRepository : IMedicineRepository
         {
             query = query.Where(m =>
                 EF.Functions.ILike(m.Name, $"%{search}%") ||
-                EF.Functions.ILike(m.Code, $"%{search}%"));
+                EF.Functions.ILike(m.Code, $"%{search}%") ||
+                (m.GenericName != null && EF.Functions.ILike(m.GenericName, $"%{search}%")) ||
+                EF.Functions.ILike(m.Category, $"%{search}%"));
         }
+
 
         var totalCount = await query.CountAsync();
 

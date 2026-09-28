@@ -8,6 +8,7 @@ public class Consultation
     public Guid DoctorId { get; set; }
     public User Doctor { get; set; } = null!;
     public string ClinicalNotes { get; set; } = string.Empty;
+    public string Findings { get; set; } = string.Empty;
     public string Symptoms { get; set; } = string.Empty;
     public string Diagnosis { get; set; } = string.Empty;
     public DateTime ConsultedAt { get; set; } = DateTime.UtcNow;

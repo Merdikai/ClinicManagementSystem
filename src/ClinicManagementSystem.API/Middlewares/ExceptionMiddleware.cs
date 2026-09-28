@@ -27,6 +27,12 @@ public class ExceptionMiddleware
             context.Response.StatusCode = (int)HttpStatusCode.NotFound;
             await WriteProblemDetails(context, "Not Found", ex.Message, StatusCodes.Status404NotFound);
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogWarning("Forbidden / Unauthorized: {Message}", ex.Message);
+            context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+            await WriteProblemDetails(context, "Forbidden", ex.Message, StatusCodes.Status403Forbidden);
+        }
         catch (BusinessRuleViolationException ex)
         {
             _logger.LogWarning("Business rule violation: {Message}", ex.Message);

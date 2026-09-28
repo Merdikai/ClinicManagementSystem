@@ -1,4 +1,9 @@
-﻿using ClinicManagementSystem.Application.Common;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using ClinicManagementSystem.Application.Common;
 using ClinicManagementSystem.Application.DTOs;
 using ClinicManagementSystem.Application.Interfaces;
 using ClinicManagementSystem.Application.Laboratories.DTOs;
@@ -91,6 +96,7 @@ public class GetLabOrdersPagedQueryHandler : IRequestHandler<GetLabOrdersPagedQu
             var s = request.Search.Trim().ToLower();
             query = query.Where(o =>
                 o.OrderNumber.ToLower().Contains(s) ||
+                (o.SpecimenBarcode != null && o.SpecimenBarcode.ToLower().Contains(s)) ||
                 o.Patient.FirstName.ToLower().Contains(s) ||
                 o.Patient.LastName.ToLower().Contains(s) ||
                 o.Patient.MedicalRecordNumber.ToLower().Contains(s));
@@ -119,7 +125,17 @@ public class GetLabOrdersPagedQueryHandler : IRequestHandler<GetLabOrdersPagedQu
                 TotalCost = o.TotalCost,
                 IsBilled = o.IsBilled,
                 SampleCollectedAt = o.SampleCollectedAt,
+                CollectedByTechnicianName = o.CollectedByTechnicianName,
                 CompletedAt = o.CompletedAt,
+                SpecimenBarcode = o.SpecimenBarcode,
+                SpecimenType = o.SpecimenType,
+                SampleCondition = o.SampleCondition,
+                IsRejected = o.IsRejected,
+                RejectionReason = o.RejectionReason,
+                RejectedAt = o.RejectedAt,
+                RejectedByTechnicianName = o.RejectedByTechnicianName,
+                RequiresRecollection = o.RequiresRecollection,
+                TechnicianNotes = o.TechnicianNotes,
                 Items = o.Items.Select(i => new LabOrderItemDto
                 {
                     Id = i.Id,
@@ -131,6 +147,9 @@ public class GetLabOrdersPagedQueryHandler : IRequestHandler<GetLabOrdersPagedQu
                     SampleType = i.LabTestTemplate.SampleType,
                     Status = i.Status.ToString(),
                     Price = i.Price,
+                    SpecimenBarcode = i.SpecimenBarcode,
+                    IsRejected = i.IsRejected,
+                    RejectionReason = i.RejectionReason,
                     Result = i.Result == null ? null : new LabResultDto
                     {
                         Id = i.Result.Id,
@@ -197,7 +216,17 @@ public class GetLabOrdersByPatientQueryHandler : IRequestHandler<GetLabOrdersByP
                 TotalCost = o.TotalCost,
                 IsBilled = o.IsBilled,
                 SampleCollectedAt = o.SampleCollectedAt,
+                CollectedByTechnicianName = o.CollectedByTechnicianName,
                 CompletedAt = o.CompletedAt,
+                SpecimenBarcode = o.SpecimenBarcode,
+                SpecimenType = o.SpecimenType,
+                SampleCondition = o.SampleCondition,
+                IsRejected = o.IsRejected,
+                RejectionReason = o.RejectionReason,
+                RejectedAt = o.RejectedAt,
+                RejectedByTechnicianName = o.RejectedByTechnicianName,
+                RequiresRecollection = o.RequiresRecollection,
+                TechnicianNotes = o.TechnicianNotes,
                 Items = o.Items.Select(i => new LabOrderItemDto
                 {
                     Id = i.Id,
@@ -209,6 +238,9 @@ public class GetLabOrdersByPatientQueryHandler : IRequestHandler<GetLabOrdersByP
                     SampleType = i.LabTestTemplate.SampleType,
                     Status = i.Status.ToString(),
                     Price = i.Price,
+                    SpecimenBarcode = i.SpecimenBarcode,
+                    IsRejected = i.IsRejected,
+                    RejectionReason = i.RejectionReason,
                     Result = i.Result == null ? null : new LabResultDto
                     {
                         Id = i.Result.Id,
@@ -249,15 +281,22 @@ public class GetLabMetricsQueryHandler : IRequestHandler<GetLabMetricsQuery, Res
         var completedToday = await _context.LabOrders.CountAsync(o => o.Status == LabOrderStatus.Completed && o.CompletedAt >= today, cancellationToken);
         var total = await _context.LabOrders.CountAsync(cancellationToken);
 
+        var criticalAlerts = await _context.LabResults.CountAsync(r => r.HasAbnormalFlag, cancellationToken);
+        var rejectedSamples = await _context.LabOrders.CountAsync(o => o.IsRejected, cancellationToken);
+        var lowReagents = await _context.LabReagents.CountAsync(r => r.CurrentStock <= r.MinimumThreshold, cancellationToken);
+        var calibrationsDue = await _context.LabEquipmentLogs.CountAsync(l => l.NextMaintenanceDueDate.HasValue && l.NextMaintenanceDueDate.Value <= DateTime.UtcNow.AddDays(3), cancellationToken);
+
         return Result<LabMetricsDto>.Success(new LabMetricsDto
         {
             PendingOrders = pending,
             SamplesCollected = collected,
             InProgress = inProgress,
             CompletedToday = completedToday,
-            TotalTests = total
+            TotalTests = total,
+            CriticalValueAlerts = criticalAlerts,
+            RejectedSamples = rejectedSamples,
+            LowStockReagents = lowReagents,
+            CalibrationsDue = calibrationsDue
         });
     }
 }
-
-

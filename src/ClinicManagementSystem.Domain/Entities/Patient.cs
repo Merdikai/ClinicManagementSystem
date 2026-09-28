@@ -12,7 +12,13 @@ public class Patient
     public string Email { get; set; } = string.Empty;
     public string Address { get; set; } = string.Empty;
     public string BloodGroup { get; set; } = string.Empty;
+    public string Allergies { get; set; } = string.Empty;
     public string EmergencyContact { get; set; } = string.Empty;
+    public string? NationalId { get; set; }
+    public string? InsuranceProvider { get; set; }
+    public string? InsurancePolicyNumber { get; set; }
+    public string? InsuranceCoveragePlan { get; set; }
+    public string? InsuranceEligibilityStatus { get; set; } = "SelfPay";
     public DateTime RegisteredAt { get; set; } = DateTime.UtcNow;
 
     public ICollection<MedicalRecord> MedicalRecords { get; set; } = new List<MedicalRecord>();

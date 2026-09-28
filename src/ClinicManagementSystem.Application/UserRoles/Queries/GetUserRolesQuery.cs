@@ -1,4 +1,4 @@
-﻿using ClinicManagementSystem.Application.Common;
+using ClinicManagementSystem.Application.Common;
 using ClinicManagementSystem.Application.DTOs;
 using ClinicManagementSystem.Application.Interfaces;
 using MediatR;
@@ -24,16 +24,23 @@ public class GetUserRolesQueryHandler : IRequestHandler<GetUserRolesQuery, Resul
                 .ThenInclude(ur => ur.Role)
             .FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
 
-        if (user is null)
-            return Result<UserWithRolesDto>.Failure("User not found", "user_not_found");
+        if (user == null)
+        {
+            return Result<UserWithRolesDto>.Failure($"User with ID '{request.UserId}' was not found.", "user_not_found");
+        }
 
-        var roles = user.UserRoles?.Select(ur => ur.Role.Name).ToList() ?? new List<string>();
-
-        return Result<UserWithRolesDto>.Success(new UserWithRolesDto(
+        var dto = new UserWithRolesDto(
             user.Id,
             user.Username,
-            $"{user.FirstName} {user.LastName}",
-            roles
-        ));
+            user.Email,
+            user.FirstName,
+            user.LastName,
+            user.PhoneNumber,
+            user.IsActive,
+            user.CreatedAt,
+            user.UserRoles?.Select(ur => ur.Role.Name).ToList() ?? new List<string>()
+        );
+
+        return Result<UserWithRolesDto>.Success(dto);
     }
 }

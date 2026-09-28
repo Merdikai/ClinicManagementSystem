@@ -1,4 +1,4 @@
-﻿using ClinicManagementSystem.API.Constants;
+using ClinicManagementSystem.API.Constants;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
@@ -85,7 +85,10 @@ public static class RateLimitingExtensions
             options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(
                 httpContext =>
                 {
-                    var role = httpContext.User.FindFirst("http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.Value ?? "anonymous";
+                    var role = httpContext.User.FindFirst(ClaimTypes.Role)?.Value 
+                        ?? httpContext.User.FindFirst("role")?.Value
+                        ?? httpContext.User.FindFirst("http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.Value 
+                        ?? "anonymous";
                     var partitionKey = httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? httpContext.Connection.RemoteIpAddress?.ToString() ?? "anonymous";
 
                     return RateLimitPartition.GetTokenBucketLimiter(partitionKey, _ =>
@@ -93,7 +96,7 @@ public static class RateLimitingExtensions
                         var (tokenLimit, windowSeconds) = role.ToLower() switch
                         {
                             "admin" => (RateLimitingConstants.AdminLimit, RateLimitingConstants.AdminWindowSeconds),
-                            "doctor" or "nurse" or "receptionist" or "pharmacist" 
+                            "doctor" or "nurse" or "receptionist" or "pharmacist" or "labtechnician" or "lab-technician" or "radiologist" or "accountant" 
                                 => (RateLimitingConstants.StaffLimit, RateLimitingConstants.StaffWindowSeconds),
                             "patient" => (RateLimitingConstants.PatientLimit, RateLimitingConstants.PatientWindowSeconds),
                             _ => (RateLimitingConstants.AnonymousLimit, RateLimitingConstants.AnonymousWindowSeconds)

@@ -11,15 +11,20 @@ public class VitalSignConfiguration : IEntityTypeConfiguration<VitalSign>
         builder.HasKey(vs => vs.Id);
 
         builder.HasOne(vs => vs.Appointment)
-            .WithOne(a => a.VitalSign)
-            .HasForeignKey<VitalSign>(vs => vs.AppointmentId)
+            .WithMany(a => a.VitalSigns)
+            .HasForeignKey(vs => vs.AppointmentId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasOne(vs => vs.Nurse)
+        builder.HasOne(vs => vs.RecordedByUser)
             .WithMany()
-            .HasForeignKey(vs => vs.RecordedByNurseId)
+            .HasForeignKey(vs => vs.RecordedByUserId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // All vitals are decimal – precision set globally in DbContext
+        builder.HasOne(vs => vs.Consultation)
+            .WithMany()
+            .HasForeignKey(vs => vs.ConsultationId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasQueryFilter(vs => !vs.Appointment.IsDeleted);
     }
 }

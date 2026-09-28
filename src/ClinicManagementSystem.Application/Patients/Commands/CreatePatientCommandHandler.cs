@@ -24,9 +24,24 @@ public class CreatePatientCommandHandler : IRequestHandler<CreatePatientCommand,
     public async Task<Result<PatientResponseDto>> Handle(CreatePatientCommand request, CancellationToken cancellationToken)
     {
         var dto = new CreatePatientDto(request.FirstName, request.LastName, request.DateOfBirth,
-            request.Gender, request.Phone, request.Email, request.Address, request.BloodGroup, request.EmergencyContact);
+            request.Gender, request.Phone, request.Email, request.Address, request.BloodGroup, request.EmergencyContact)
+        {
+            Allergies = request.Allergies,
+            NationalId = request.NationalId,
+            InsuranceProvider = request.InsuranceProvider,
+            InsurancePolicyNumber = request.InsurancePolicyNumber,
+            InsuranceCoveragePlan = request.InsuranceCoveragePlan,
+            InsuranceEligibilityStatus = !string.IsNullOrWhiteSpace(request.InsuranceEligibilityStatus) 
+                ? request.InsuranceEligibilityStatus 
+                : (!string.IsNullOrWhiteSpace(request.InsuranceProvider) ? "Active" : "Self-Pay")
+        };
         var patient = _mapper.Map<Patient>(dto);
         patient.MedicalRecordNumber = GenerateMRN();
+        patient.NationalId = dto.NationalId;
+        patient.InsuranceProvider = dto.InsuranceProvider;
+        patient.InsurancePolicyNumber = dto.InsurancePolicyNumber;
+        patient.InsuranceCoveragePlan = dto.InsuranceCoveragePlan;
+        patient.InsuranceEligibilityStatus = dto.InsuranceEligibilityStatus;
 
         await _patientRepository.AddAsync(patient);
         await _patientRepository.SaveChangesAsync();

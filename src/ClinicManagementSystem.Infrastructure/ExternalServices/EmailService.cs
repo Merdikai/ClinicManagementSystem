@@ -1,4 +1,4 @@
-﻿using ClinicManagementSystem.Application.Interfaces;
+using ClinicManagementSystem.Application.Interfaces;
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using Microsoft.Extensions.Configuration;
@@ -28,7 +28,11 @@ public class EmailService : IEmailService
             var username = _configuration["Email:Username"];
             var password = _configuration["Email:Password"];
 
-            if (string.IsNullOrEmpty(smtpServer) || string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+            if (string.IsNullOrEmpty(smtpServer) || 
+                string.IsNullOrEmpty(username) || 
+                string.IsNullOrEmpty(password) ||
+                username.Contains("your-email") ||
+                password.Contains("your-app-password"))
             {
                 _logger.LogInformation("[DEV EMAIL MOCK] To: {To} | Subject: {Subject} | Body length: {Length}", to, subject, body.Length);
                 return;

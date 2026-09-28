@@ -1,4 +1,4 @@
-﻿using ClinicManagementSystem.Domain.Enums;
+using ClinicManagementSystem.Domain.Enums;
 
 namespace ClinicManagementSystem.Domain.Entities;
 
@@ -20,7 +20,19 @@ public class LabOrder
     public decimal TotalCost { get; set; }
     public bool IsBilled { get; set; } = false;
     public DateTime? SampleCollectedAt { get; set; }
+    public string? CollectedByTechnicianName { get; set; }
     public DateTime? CompletedAt { get; set; }
+
+    // Specimen Accessioning & Quality Validation
+    public string? SpecimenBarcode { get; set; }
+    public string? SpecimenType { get; set; }
+    public string? SampleCondition { get; set; } // Viable, Hemolyzed, Lipemic, Clotted, InsufficientVolume
+    public bool IsRejected { get; set; } = false;
+    public string? RejectionReason { get; set; }
+    public DateTime? RejectedAt { get; set; }
+    public string? RejectedByTechnicianName { get; set; }
+    public bool RequiresRecollection { get; set; } = false;
+    public string? TechnicianNotes { get; set; }
 
     public ICollection<LabOrderItem> Items { get; set; } = new List<LabOrderItem>();
 }

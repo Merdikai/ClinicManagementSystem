@@ -63,19 +63,21 @@ public class ReportsController : ControllerBase
 
     [HttpGet("export/patients")]
     [Authorize(Roles = "Admin,Accountant,Receptionist,Doctor,Nurse")]
-    [EndpointSummary("Export all patients to CSV")]
-    public async Task<IActionResult> ExportPatients()
+    [EndpointSummary("Export patients to Excel CSV with optional timeframe")]
+    public async Task<IActionResult> ExportPatients([FromQuery] DateTime? startDate = null, [FromQuery] DateTime? endDate = null, [FromQuery] string? timeframe = null)
     {
-        var csv = await _sender.Send(new ExportPatientsCsvQuery());
-        return File(csv, "text/csv", $"patients-{DateTime.UtcNow:yyyyMMdd}.csv");
+        var csv = await _sender.Send(new ExportPatientsCsvQuery(startDate, endDate, timeframe));
+        var tfSuffix = string.IsNullOrWhiteSpace(timeframe) ? "" : $"-{timeframe.ToLower()}";
+        return File(csv, "text/csv; charset=utf-8", $"patients{tfSuffix}-{DateTime.UtcNow:yyyyMMdd}.csv");
     }
 
     [HttpGet("export/invoices")]
     [Authorize(Roles = "Admin,Accountant,Receptionist")]
-    [EndpointSummary("Export invoices to CSV")]
-    public async Task<IActionResult> ExportInvoices([FromQuery] DateTime? startDate = null, [FromQuery] DateTime? endDate = null)
+    [EndpointSummary("Export invoices to Excel CSV with optional timeframe")]
+    public async Task<IActionResult> ExportInvoices([FromQuery] DateTime? startDate = null, [FromQuery] DateTime? endDate = null, [FromQuery] string? timeframe = null)
     {
-        var csv = await _sender.Send(new ExportInvoicesCsvQuery(startDate, endDate));
-        return File(csv, "text/csv", $"invoices-{DateTime.UtcNow:yyyyMMdd}.csv");
+        var csv = await _sender.Send(new ExportInvoicesCsvQuery(startDate, endDate, timeframe));
+        var tfSuffix = string.IsNullOrWhiteSpace(timeframe) ? "" : $"-{timeframe.ToLower()}";
+        return File(csv, "text/csv; charset=utf-8", $"invoices{tfSuffix}-{DateTime.UtcNow:yyyyMMdd}.csv");
     }
 }

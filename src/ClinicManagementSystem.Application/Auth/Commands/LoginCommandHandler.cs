@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using ClinicManagementSystem.Application.DTOs;
 using ClinicManagementSystem.Application.Exceptions;
 using ClinicManagementSystem.Application.Interfaces;
@@ -25,6 +26,11 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
     public async Task<AuthResponseDto> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
         var user = await _userRepository.GetByUsernameAsync(request.Username);
+        if (user is null && request.Username.Contains('@'))
+        {
+            user = await _userRepository.GetByEmailAsync(request.Username);
+        }
+
         if (user is null || !_passwordHasher.Verify(request.Password, user.PasswordHash))
             throw new BusinessRuleViolationException("Invalid username or password.", "invalid_credentials");
 
@@ -32,6 +38,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
             throw new BusinessRuleViolationException("Account is deactivated.", "account_deactivated");
 
         var roles = user.UserRoles?.Select(ur => ur.Role.Name).ToList() ?? new List<string>();
+        var patient = await _context.Patients.FirstOrDefaultAsync(p => p.Email == user.Email, cancellationToken);
         var refreshToken = await GenerateRefreshTokenAsync(user.Id);
 
         return new AuthResponseDto
@@ -42,7 +49,8 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
             Email = user.Email ?? string.Empty,
             FullName = $"{user.FirstName} {user.LastName}",
             Roles = roles,
-            ExpiresAt = DateTime.UtcNow.AddHours(2)
+            ExpiresAt = DateTime.UtcNow.AddHours(2),
+            PatientId = patient?.Id
         };
     }
 

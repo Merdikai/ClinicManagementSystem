@@ -1,4 +1,5 @@
-﻿using ClinicManagementSystem.Domain.Entities;
+using ClinicManagementSystem.Domain.Entities;
+using ClinicManagementSystem.Domain.Enums;
 using ClinicManagementSystem.Domain.Interfaces;
 using ClinicManagementSystem.Infrastructure.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
@@ -19,7 +20,7 @@ public class AppointmentRepository : IAppointmentRepository
         return await _context.Appointments
             .Include(a => a.Patient)
             .Include(a => a.Doctor)
-            .Include(a => a.VitalSign)
+            .Include(a => a.VitalSigns)
             .Include(a => a.Consultation)
                 .ThenInclude(c => c!.Prescription)
                     .ThenInclude(p => p!.PrescriptionItems)
@@ -29,8 +30,9 @@ public class AppointmentRepository : IAppointmentRepository
     public async Task<IEnumerable<Appointment>> GetByPatientIdAsync(Guid patientId)
     {
         return await _context.Appointments
+            .Include(a => a.Patient)
             .Include(a => a.Doctor)
-            .Include(a => a.VitalSign)
+            .Include(a => a.VitalSigns)
             .Include(a => a.Consultation)
                 .ThenInclude(c => c!.Prescription)
                     .ThenInclude(p => p!.PrescriptionItems)
@@ -43,24 +45,39 @@ public class AppointmentRepository : IAppointmentRepository
     {
         var query = _context.Appointments
             .Include(a => a.Patient)
+            .Include(a => a.Doctor)
+            .Include(a => a.VitalSigns)
+            .Include(a => a.Consultation)
+                .ThenInclude(c => c!.Prescription)
+                    .ThenInclude(p => p!.PrescriptionItems)
             .Where(a => a.DoctorId == doctorId);
 
         if (date.HasValue)
         {
-            var targetDate = date.Value.Date;
-            query = query.Where(a => a.ScheduledDateTime.Date == targetDate);
+            var start = date.Value.Date;
+            var end = start.AddDays(1);
+            query = query.Where(a => a.ScheduledDateTime >= start && a.ScheduledDateTime < end);
         }
 
         return await query.OrderBy(a => a.ScheduledDateTime).ToListAsync();
     }
 
-    public async Task<(IEnumerable<Appointment> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, DateTime? startDate, DateTime? endDate)
+    public async Task<(IEnumerable<Appointment> Items, int TotalCount)> GetPagedAsync(
+        int page, 
+        int pageSize, 
+        DateTime? startDate, 
+        DateTime? endDate, 
+        Guid? patientId = null, 
+        AppointmentStatus? status = null)
     {
         var query = _context.Appointments
             .Include(a => a.Patient)
             .Include(a => a.Doctor)
-            .Include(a => a.VitalSign)
-            .AsQueryable();
+            .Include(a => a.VitalSigns)
+            .Include(a => a.Consultation)
+                .ThenInclude(c => c!.Prescription)
+                    .ThenInclude(p => p!.PrescriptionItems)
+            .AsNoTracking();
 
         if (startDate.HasValue)
             query = query.Where(a => a.ScheduledDateTime >= startDate.Value);
@@ -68,9 +85,15 @@ public class AppointmentRepository : IAppointmentRepository
         if (endDate.HasValue)
             query = query.Where(a => a.ScheduledDateTime <= endDate.Value);
 
+        if (patientId.HasValue && patientId.Value != Guid.Empty)
+            query = query.Where(a => a.PatientId == patientId.Value);
+
+        if (status.HasValue)
+            query = query.Where(a => a.Status == status.Value);
+
         var totalCount = await query.CountAsync();
         var items = await query
-            .OrderBy(a => a.ScheduledDateTime)
+            .OrderByDescending(a => a.ScheduledDateTime)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
@@ -80,37 +103,33 @@ public class AppointmentRepository : IAppointmentRepository
 
     public async Task<bool> IsSlotAvailableAsync(Guid doctorId, DateTime dateTime, int durationMinutes)
     {
-        var requestedEnd = dateTime.AddMinutes(durationMinutes);
-
-        var hasConflict = await _context.Appointments
-            .AnyAsync(a => a.DoctorId == doctorId &&
-                           a.Status != Domain.Enums.AppointmentStatus.Cancelled &&
-                           ((dateTime >= a.ScheduledDateTime && dateTime < a.ScheduledDateTime.AddMinutes(a.DurationMinutes)) ||
-                            (requestedEnd > a.ScheduledDateTime && requestedEnd <= a.ScheduledDateTime.AddMinutes(a.DurationMinutes)) ||
-                            (dateTime <= a.ScheduledDateTime && requestedEnd >= a.ScheduledDateTime.AddMinutes(a.DurationMinutes))));
-
-        return !hasConflict;
+        var end = dateTime.AddMinutes(durationMinutes);
+        return !await _context.Appointments.AnyAsync(a =>
+            a.DoctorId == doctorId &&
+            a.Status != AppointmentStatus.Cancelled &&
+            a.Status != AppointmentStatus.Rejected &&
+            a.ScheduledDateTime < end &&
+            a.ScheduledDateTime.AddMinutes(a.DurationMinutes) > dateTime);
     }
 
     public async Task AddAsync(Appointment appointment)
     {
         await _context.Appointments.AddAsync(appointment);
-        await _context.SaveChangesAsync();
     }
 
     public void Update(Appointment appointment)
     {
         _context.Appointments.Update(appointment);
-        _context.SaveChanges();
     }
 
     public async Task SoftDeleteAsync(Guid id)
     {
-        var appt = await _context.Appointments.FindAsync(id);
-        if (appt != null)
+        var appointment = await _context.Appointments.FindAsync(id);
+        if (appointment != null)
         {
-            appt.IsDeleted = true;
-            await _context.SaveChangesAsync();
+            appointment.IsDeleted = true;
+            appointment.DeletedAt = DateTime.UtcNow;
+            appointment.Status = AppointmentStatus.Cancelled;
         }
     }
 

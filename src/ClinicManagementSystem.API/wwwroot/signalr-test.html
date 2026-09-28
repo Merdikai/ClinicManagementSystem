@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -93,6 +93,10 @@
         connection.on("PatientCheckedIn", data => addEvent("PatientCheckedIn", data));
         connection.on("LowStockAlert", data => addEvent("LowStockAlert", data));
         connection.on("InvoicePaid", data => addEvent("InvoicePaid", data));
+        connection.on("RadiologyOrderUpdated", data => addEvent("RadiologyOrderUpdated", data));
+        connection.on("LabOrderUpdated", data => addEvent("LabOrderUpdated", data));
+        connection.on("BreakGlassAlert", data => addEvent("BreakGlassAlert", data));
+        connection.on("DutyRosterChanged", data => addEvent("DutyRosterChanged", data));
 
         connection.start().then(() => {
             statusElem.textContent = "Connected to SignalR";

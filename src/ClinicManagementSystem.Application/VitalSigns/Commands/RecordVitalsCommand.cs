@@ -13,5 +13,9 @@ public record RecordVitalsCommand(
     decimal RespiratoryRate,
     decimal WeightKg,
     decimal HeightCm,
-    Guid NurseId
+    Guid UserId,
+    Guid? ConsultationId = null,
+    decimal? OxygenSaturation = null,
+    int? PainScore = null
 ) : IRequest<Result<VitalSignResponseDto>>;
+

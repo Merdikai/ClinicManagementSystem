@@ -1,5 +1,10 @@
+using System;
+using System.Security.Claims;
+using System.Threading.Tasks;
 using Asp.Versioning;
-using ClinicManagementSystem.Application.Interfaces;
+using AutoMapper;
+using ClinicManagementSystem.Application.Notifications.Commands;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,30 +19,27 @@ public record BroadcastAlertRequest(string? Message, string? Title);
 [Authorize]
 public class NotificationsController : ControllerBase
 {
-    private readonly INotificationService _notificationService;
+    private readonly ISender _sender;
+    private readonly IMapper _mapper;
 
-    public NotificationsController(INotificationService notificationService)
+    public NotificationsController(ISender sender, IMapper mapper)
     {
-        _notificationService = notificationService;
+        _sender = sender;
+        _mapper = mapper;
     }
 
     [AllowAnonymous]
     [HttpPost("test")]
     public async Task<IActionResult> TestNotification([FromBody] BroadcastAlertRequest? request = null)
     {
-        var userClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var userClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         var userId = Guid.TryParse(userClaim, out var parsed) ? parsed : Guid.NewGuid();
         var userName = User.Identity?.Name ?? "Admin";
         var messageText = !string.IsNullOrWhiteSpace(request?.Message) 
             ? request.Message 
             : $"Broadcast alert issued by {userName}";
 
-        await _notificationService.NotifyAppointmentBookedAsync(
-            userId,
-            Guid.NewGuid(),
-            messageText
-        );
-
-        return Ok(new { message = "Broadcast notification sent successfully", text = messageText });
+        var result = await _sender.Send(new SendTestNotificationCommand(userId, messageText));
+        return Ok(new { message = "Broadcast notification sent successfully", text = result });
     }
 }

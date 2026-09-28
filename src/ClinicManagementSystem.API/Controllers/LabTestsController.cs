@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Asp.Versioning;
 using ClinicManagementSystem.API.Constants;
+using ClinicManagementSystem.Application.Laboratories.Commands;
 using ClinicManagementSystem.Application.Laboratories.DTOs;
 using ClinicManagementSystem.Application.Laboratories.Queries;
 using MediatR;
@@ -31,5 +32,34 @@ public class LabTestsController : ControllerBase
     {
         var result = await _sender.Send(new GetLabTestTemplatesQuery(category));
         return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Error);
+    }
+
+    [HttpPost]
+    [EndpointSummary("Create a new diagnostic lab test template")]
+    [ProducesResponseType(typeof(LabTestTemplateDto), StatusCodes.Status201Created)]
+    public async Task<IActionResult> Create([FromBody] CreateLabTestTemplateDto dto)
+    {
+        var result = await _sender.Send(new CreateLabTestTemplateCommand(dto));
+        return result.IsSuccess
+            ? CreatedAtAction(nameof(GetAll), new { category = result.Value!.Category }, result.Value)
+            : BadRequest(result.Error);
+    }
+
+    [HttpPut("{id:guid}")]
+    [EndpointSummary("Update an existing diagnostic lab test template")]
+    [ProducesResponseType(typeof(LabTestTemplateDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateLabTestTemplateDto dto)
+    {
+        var result = await _sender.Send(new UpdateLabTestTemplateCommand(id, dto));
+        return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Error);
+    }
+
+    [HttpDelete("{id:guid}")]
+    [EndpointSummary("Delete or deactivate a diagnostic lab test template")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        var result = await _sender.Send(new DeleteLabTestTemplateCommand(id));
+        return result.IsSuccess ? NoContent() : BadRequest(result.Error);
     }
 }

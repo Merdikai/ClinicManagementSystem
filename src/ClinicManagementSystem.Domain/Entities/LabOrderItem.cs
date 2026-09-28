@@ -1,4 +1,4 @@
-﻿using ClinicManagementSystem.Domain.Enums;
+using ClinicManagementSystem.Domain.Enums;
 
 namespace ClinicManagementSystem.Domain.Entities;
 
@@ -12,6 +12,9 @@ public class LabOrderItem
 
     public LabOrderStatus Status { get; set; } = LabOrderStatus.Ordered;
     public decimal Price { get; set; }
+    public string? SpecimenBarcode { get; set; }
+    public bool IsRejected { get; set; } = false;
+    public string? RejectionReason { get; set; }
 
     public LabResult? Result { get; set; }
 }

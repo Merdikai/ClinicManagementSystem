@@ -1,4 +1,4 @@
-﻿using ClinicManagementSystem.Application.Interfaces;
+using ClinicManagementSystem.Application.Interfaces;
 using ClinicManagementSystem.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -37,6 +37,25 @@ public class ClinicDbContext : DbContext, IClinicDbContext
     public DbSet<LabOrder> LabOrders => Set<LabOrder>();
     public DbSet<LabOrderItem> LabOrderItems => Set<LabOrderItem>();
     public DbSet<LabResult> LabResults => Set<LabResult>();
+    public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+    public DbSet<EmrAccessAuditLog> EmrAccessAuditLogs => Set<EmrAccessAuditLog>();
+    public DbSet<StaffDutyShift> StaffDutyShifts => Set<StaffDutyShift>();
+    public DbSet<DoctorDelegation> DoctorDelegations => Set<DoctorDelegation>();
+    public DbSet<NursingProcedure> NursingProcedures => Set<NursingProcedure>();
+    public DbSet<ShiftHandover> ShiftHandovers => Set<ShiftHandover>();
+    public DbSet<DailyCashReconciliation> DailyCashReconciliations => Set<DailyCashReconciliation>();
+    public DbSet<VisitorInquiry> VisitorInquiries => Set<VisitorInquiry>();
+    public DbSet<PharmacyStockRequisition> PharmacyStockRequisitions => Set<PharmacyStockRequisition>();
+    public DbSet<ControlledSubstanceLog> ControlledSubstanceLogs => Set<ControlledSubstanceLog>();
+    public DbSet<InsuranceClaim> InsuranceClaims => Set<InsuranceClaim>();
+    public DbSet<BillingAdjustment> BillingAdjustments => Set<BillingAdjustment>();
+    public DbSet<ExpenseTransaction> ExpenseTransactions => Set<ExpenseTransaction>();
+    public DbSet<PettyCashVoucher> PettyCashVouchers => Set<PettyCashVoucher>();
+    public DbSet<PayrollRecord> PayrollRecords => Set<PayrollRecord>();
+    public DbSet<LabReagent> LabReagents => Set<LabReagent>();
+    public DbSet<LabStockRequisition> LabStockRequisitions => Set<LabStockRequisition>();
+    public DbSet<LabEquipmentLog> LabEquipmentLogs => Set<LabEquipmentLog>();
+    public DbSet<RadiologyOrder> RadiologyOrders => Set<RadiologyOrder>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -1,4 +1,4 @@
-﻿using ClinicManagementSystem.Domain.Entities;
+using ClinicManagementSystem.Domain.Entities;
 using ClinicManagementSystem.Domain.Interfaces;
 using ClinicManagementSystem.Infrastructure.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
@@ -19,6 +19,16 @@ public class DoctorScheduleRepository : IDoctorScheduleRepository
         return await _context.DoctorSchedules
             .Include(ds => ds.Doctor)
             .FirstOrDefaultAsync(ds => ds.Id == id);
+    }
+
+    public async Task<IEnumerable<DoctorSchedule>> GetAllAsync()
+    {
+        return await _context.DoctorSchedules
+            .Include(ds => ds.Doctor)
+            .OrderBy(ds => ds.Doctor != null ? ds.Doctor.LastName : "")
+            .ThenBy(ds => ds.DayOfWeek)
+            .ThenBy(ds => ds.StartTime)
+            .ToListAsync();
     }
 
     public async Task<IEnumerable<DoctorSchedule>> GetByDoctorIdAsync(Guid doctorId)

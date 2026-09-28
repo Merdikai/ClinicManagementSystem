@@ -8,7 +8,10 @@ public record RecordVitalsDto(
     decimal HeartRateBpm,
     decimal RespiratoryRate,
     decimal WeightKg,
-    decimal HeightCm
+    decimal HeightCm,
+    Guid? ConsultationId = null,
+    decimal? OxygenSaturation = null,
+    int? PainScore = null
 );
 
 public class VitalSignResponseDto
@@ -21,6 +24,9 @@ public class VitalSignResponseDto
     public decimal RespiratoryRate { get; set; }
     public decimal WeightKg { get; set; }
     public decimal HeightCm { get; set; }
+    public decimal? OxygenSaturation { get; set; }
+    public int? PainScore { get; set; }
     public DateTime RecordedAt { get; set; }
-    public string RecordedByNurse { get; set; } = string.Empty;
+    public string RecordedByUser { get; set; } = string.Empty;
 }
+

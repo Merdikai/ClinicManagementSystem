@@ -1,4 +1,4 @@
-﻿using Asp.Versioning;
+using Asp.Versioning;
 using ClinicManagementSystem.Application.Auth.Commands;
 using ClinicManagementSystem.Application.Auth.Queries;
 using ClinicManagementSystem.Application.DTOs;
@@ -87,8 +87,13 @@ public class AuthController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
     {
-        await _sender.Send(new ForgotPasswordCommand(dto.Email));
-        return Ok(new { message = "If the email exists, a reset link has been sent." });
+        var result = await _sender.Send(new ForgotPasswordCommand(dto.Email));
+        return Ok(new
+        {
+            message = "If the email exists, a password reset link has been dispatched.",
+            resetToken = result.Value,
+            resetLink = !string.IsNullOrEmpty(result.Value) ? $"/reset-password?token={result.Value}" : null
+        });
     }
 
     [HttpPost("reset-password")]

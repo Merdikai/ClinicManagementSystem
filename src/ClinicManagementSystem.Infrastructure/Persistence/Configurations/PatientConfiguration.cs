@@ -41,6 +41,8 @@ public class PatientConfiguration : IEntityTypeConfiguration<Patient>
         builder.Property(p => p.BloodGroup)
             .HasMaxLength(5);
 
+        builder.Property(p => p.Allergies).HasMaxLength(1000);
+
         builder.Property(p => p.EmergencyContact)
             .HasMaxLength(100);
     }

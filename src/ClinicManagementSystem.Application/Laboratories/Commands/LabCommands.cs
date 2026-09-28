@@ -1,4 +1,4 @@
-﻿using ClinicManagementSystem.Application.Common;
+using ClinicManagementSystem.Application.Common;
 using ClinicManagementSystem.Application.DTOs;
 using ClinicManagementSystem.Application.Interfaces;
 using ClinicManagementSystem.Application.Laboratories.DTOs;
@@ -229,4 +229,61 @@ public class RecordLabResultCommandHandler : IRequestHandler<RecordLabResultComm
         return Result<LabResultDto>.Success(dto);
     }
 }
+
+public record VerifyLabResultCommand(Guid OrderItemId, Guid CurrentUserId) : IRequest<Result<LabResultDto>>;
+
+public class VerifyLabResultCommandHandler : IRequestHandler<VerifyLabResultCommand, Result<LabResultDto>>
+{
+    private readonly IClinicDbContext _context;
+
+    public VerifyLabResultCommandHandler(IClinicDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<Result<LabResultDto>> Handle(VerifyLabResultCommand request, CancellationToken cancellationToken)
+    {
+        var item = await _context.LabOrderItems
+            .Include(i => i.LabOrder)
+            .Include(i => i.Result)
+            .FirstOrDefaultAsync(i => i.Id == request.OrderItemId, cancellationToken);
+
+        if (item is null)
+            return Result<LabResultDto>.Failure("Lab order item not found");
+
+        if (item.Result is null)
+            return Result<LabResultDto>.Failure("No result recorded yet for this test item to verify");
+
+        item.Result.VerifiedByDoctorId = request.CurrentUserId;
+        item.Status = LabOrderStatus.Completed;
+
+        var allItems = await _context.LabOrderItems
+            .Where(x => x.LabOrderId == item.LabOrderId)
+            .ToListAsync(cancellationToken);
+
+        if (allItems.All(x => x.Id == item.Id || x.Status == LabOrderStatus.Completed))
+        {
+            item.LabOrder.Status = LabOrderStatus.Completed;
+            item.LabOrder.CompletedAt = DateTime.UtcNow;
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        var dto = new LabResultDto
+        {
+            Id = item.Result.Id,
+            LabOrderItemId = item.Result.LabOrderItemId,
+            PerformedByTechnicianId = item.Result.PerformedByTechnicianId,
+            VerifiedByDoctorId = item.Result.VerifiedByDoctorId,
+            ResultDate = item.Result.ResultDate,
+            ParameterResultsJson = item.Result.ParameterResultsJson,
+            Remarks = item.Result.Remarks,
+            HasAbnormalFlag = item.Result.HasAbnormalFlag,
+            AttachmentUrl = item.Result.AttachmentUrl
+        };
+
+        return Result<LabResultDto>.Success(dto);
+    }
+}
+
 

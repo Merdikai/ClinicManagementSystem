@@ -2,6 +2,7 @@ using ClinicManagementSystem.Application.DTOs;
 using ClinicManagementSystem.Application.VitalSigns.Commands;
 using ClinicManagementSystem.Application.VitalSigns.Queries;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Asp.Versioning;
 
@@ -11,6 +12,7 @@ namespace ClinicManagementSystem.API.Controllers;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/vital-signs")]
 [Tags("Vital Signs")]
+[Authorize]
 public class VitalSignsController : ControllerBase
 {
     private readonly ISender _sender;
@@ -21,18 +23,19 @@ public class VitalSignsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Nurse,Doctor,Admin")]
     [EndpointSummary("Record patient vital signs for an appointment")]
     [ProducesResponseType(typeof(VitalSignResponseDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> RecordVitals([FromBody] RecordVitalsDto dto, [FromQuery] Guid? nurseId)
+    public async Task<IActionResult> RecordVitals([FromBody] RecordVitalsDto dto, [FromQuery] Guid? userId)
     {
-        Guid resolvedNurseId = (nurseId.HasValue && nurseId.Value != Guid.Empty) ? nurseId.Value : Guid.Empty;
-        if (resolvedNurseId == Guid.Empty)
+        Guid resolvedUserId = (userId.HasValue && userId.Value != Guid.Empty) ? userId.Value : Guid.Empty;
+        if (resolvedUserId == Guid.Empty)
         {
             var claim = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (Guid.TryParse(claim, out var parsedId))
             {
-                resolvedNurseId = parsedId;
+                resolvedUserId = parsedId;
             }
         }
 
@@ -45,7 +48,10 @@ public class VitalSignsController : ControllerBase
             dto.RespiratoryRate,
             dto.WeightKg,
             dto.HeightCm,
-            resolvedNurseId);
+            resolvedUserId,
+            dto.ConsultationId,
+            dto.OxygenSaturation,
+            dto.PainScore);
 
         var result = await _sender.Send(command);
         return result.Match<IActionResult>(

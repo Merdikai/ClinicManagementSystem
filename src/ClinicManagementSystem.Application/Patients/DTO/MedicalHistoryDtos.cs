@@ -1,9 +1,10 @@
-﻿namespace ClinicManagementSystem.Application.DTOs;
+namespace ClinicManagementSystem.Application.DTOs;
 
 public record MedicalHistoryResponseDto(
     Guid PatientId,
     string PatientName,
-    IEnumerable<VisitRecordDto> Visits
+    IEnumerable<VisitRecordDto> Visits,
+    IEnumerable<ClinicManagementSystem.Application.Radiology.DTOs.RadiologyOrderDto>? RadiologyOrders = null
 );
 
 public record VisitRecordDto(
@@ -14,5 +15,7 @@ public record VisitRecordDto(
     string Diagnosis,
     string Symptoms,
     VitalSignResponseDto? VitalSigns,
-    PrescriptionResponseDto? Prescription
+    PrescriptionResponseDto? Prescription,
+    string? Findings = null,
+    string? ClinicalNotes = null
 );

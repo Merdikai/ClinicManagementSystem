@@ -11,5 +11,15 @@ public record CreateMedicineCommand(
     int StockQuantity,
     decimal UnitPrice,
     DateTime? ExpiryDate = null,
-    string BatchNumber = ""
+    string BatchNumber = "",
+    string? GenericName = null,
+    string? DosageForm = null,
+    string? Strength = null,
+    string? Manufacturer = null,
+    int ReorderLevel = 15,
+    decimal CostPrice = 0.0m,
+    string? StorageConditions = null,
+    bool IsControlledSubstance = false,
+    bool IsActive = true
 ) : IRequest<Result<MedicineResponseDto>>;
+

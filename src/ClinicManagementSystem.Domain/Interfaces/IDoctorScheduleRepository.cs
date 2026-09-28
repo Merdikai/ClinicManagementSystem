@@ -1,10 +1,11 @@
-﻿using ClinicManagementSystem.Domain.Entities;
+using ClinicManagementSystem.Domain.Entities;
 
 namespace ClinicManagementSystem.Domain.Interfaces;
 
 public interface IDoctorScheduleRepository
 {
     Task<DoctorSchedule?> GetByIdAsync(Guid id);
+    Task<IEnumerable<DoctorSchedule>> GetAllAsync();
     Task<IEnumerable<DoctorSchedule>> GetByDoctorIdAsync(Guid doctorId);
     Task AddAsync(DoctorSchedule schedule);
     void Update(DoctorSchedule schedule);

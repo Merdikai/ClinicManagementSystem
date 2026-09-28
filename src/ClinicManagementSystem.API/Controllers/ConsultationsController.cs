@@ -1,14 +1,18 @@
+using System;
+using System.Collections.Generic;
+using System.Security.Claims;
+using System.Threading.Tasks;
 using Asp.Versioning;
+using AutoMapper;
+using ClinicManagementSystem.API.Constants;
+using ClinicManagementSystem.Application.Consultations.Commands;
+using ClinicManagementSystem.Application.Consultations.Queries;
 using ClinicManagementSystem.Application.DTOs;
-using ClinicManagementSystem.Domain.Entities;
-using ClinicManagementSystem.Domain.Enums;
-using ClinicManagementSystem.Infrastructure.Persistence.Context;
+using ClinicManagementSystem.Application.Interfaces;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
-using ClinicManagementSystem.API.Constants;
 using Microsoft.AspNetCore.RateLimiting;
 
 namespace ClinicManagementSystem.API.Controllers;
@@ -20,11 +24,15 @@ namespace ClinicManagementSystem.API.Controllers;
 [EnableRateLimiting(RateLimitingConstants.StaffPolicy)]
 public class ConsultationsController : ControllerBase
 {
-    private readonly ClinicDbContext _context;
+    private readonly ISender _sender;
+    private readonly IMapper _mapper;
+    private readonly ICurrentUserService _currentUserService;
 
-    public ConsultationsController(ClinicDbContext context)
+    public ConsultationsController(ISender sender, IMapper mapper, ICurrentUserService currentUserService)
     {
-        _context = context;
+        _sender = sender;
+        _mapper = mapper;
+        _currentUserService = currentUserService;
     }
 
     [HttpPost]
@@ -34,121 +42,86 @@ public class ConsultationsController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] CreateConsultationDto dto)
     {
-        var doctorIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        Guid doctorId = Guid.Empty;
-        if (!string.IsNullOrEmpty(doctorIdStr))
+        var doctorId = _currentUserService.UserId ?? Guid.Empty;
+        if (doctorId == Guid.Empty)
         {
+            var doctorIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             Guid.TryParse(doctorIdStr, out doctorId);
         }
 
-        var appointment = await _context.Appointments
-            .Include(a => a.Patient)
-            .Include(a => a.Doctor)
-            .FirstOrDefaultAsync(a => a.Id == dto.AppointmentId);
-
-        if (appointment == null)
-        {
-            return NotFound(new ProblemDetails { Title = "Not Found", Detail = $"Appointment {dto.AppointmentId} not found", Status = 404 });
-        }
-
         if (doctorId == Guid.Empty)
-        {
-            doctorId = appointment.DoctorId;
-        }
+            return Unauthorized();
 
-        var consultation = new Consultation
-        {
-            AppointmentId = dto.AppointmentId,
-            DoctorId = doctorId,
-            Symptoms = dto.Symptoms ?? string.Empty,
-            Diagnosis = dto.Diagnosis ?? string.Empty,
-            ClinicalNotes = dto.ClinicalNotes ?? string.Empty,
-            ConsultedAt = DateTime.UtcNow
-        };
+        var isAdmin = User.IsInRole("Admin");
 
-        await _context.Consultations.AddAsync(consultation);
-
-        // Mark appointment completed
-        appointment.Status = AppointmentStatus.Completed;
-
-        // Process prescription if items provided
-        if (dto.PrescriptionItems != null && dto.PrescriptionItems.Count > 0)
-        {
-            var prescription = new Prescription
-            {
-                Consultation = consultation,
-                Notes = dto.PrescriptionNotes ?? "Standard prescription issued by doctor",
-                IssuedAt = DateTime.UtcNow
-            };
-
-            foreach (var itemDto in dto.PrescriptionItems)
-            {
-                var medicine = await _context.Medicines.FindAsync(itemDto.MedicineId);
-                var unitPrice = medicine?.UnitPrice ?? 10.0m;
-
-                prescription.PrescriptionItems.Add(new PrescriptionItem
-                {
-                    MedicineId = itemDto.MedicineId,
-                    Quantity = itemDto.Quantity > 0 ? itemDto.Quantity : 1,
-                    UnitPrice = unitPrice,
-                    DosageInstructions = itemDto.DosageInstructions ?? "As directed by physician"
-                });
-            }
-
-            await _context.Prescriptions.AddAsync(prescription);
-        }
-
-        await _context.SaveChangesAsync();
-
-        var doctorName = appointment.Doctor != null
-            ? $"{appointment.Doctor.FirstName} {appointment.Doctor.LastName}"
-            : "Doctor";
-
-        var response = new ConsultationResponseDto
-        {
-            Id = consultation.Id,
-            AppointmentId = consultation.AppointmentId,
-            DoctorName = doctorName,
-            Symptoms = consultation.Symptoms,
-            Diagnosis = consultation.Diagnosis,
-            ClinicalNotes = consultation.ClinicalNotes,
-            ConsultedAt = consultation.ConsultedAt
-        };
-
-        return StatusCode(StatusCodes.Status201Created, response);
+        var result = await _sender.Send(new CreateConsultationCommand(
+            dto.AppointmentId,
+            doctorId,
+            dto.Symptoms,
+            dto.Diagnosis,
+            dto.Findings ?? string.Empty,
+            dto.ClinicalNotes,
+            dto.PrescriptionNotes,
+            dto.PrescriptionItems,
+            dto.SystolicBP,
+            dto.DiastolicBP,
+            dto.TemperatureC,
+            dto.HeartRateBpm,
+            dto.RespiratoryRate,
+            dto.WeightKg,
+            dto.HeightCm,
+            dto.LabTestTemplateIds,
+            dto.LabPriority,
+            dto.LabClinicalNotes,
+            dto.RadiologyOrders,
+            dto.NursingProcedureOrders,
+            isAdmin
+        ));
+        return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
 
-    [HttpGet("appointment/{appointmentId:guid}")]
-    [EndpointSummary("Get consultation details by appointment ID")]
+    [HttpGet]
+    [Authorize(Roles = "Doctor,Nurse,Admin")]
+    [EndpointSummary("Get paginated or filtered list of consultations")]
+    [ProducesResponseType(typeof(List<ConsultationResponseDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAll([FromQuery] Guid? doctorId = null, [FromQuery] Guid? patientId = null)
+    {
+        // When viewing a specific patient chart, allow doctors to view complete historical consultations across providers.
+        // When browsing general consultation lists, isolate to the logged-in doctor's assigned cases.
+        if (_currentUserService.IsDoctor && !_currentUserService.IsAdmin && !patientId.HasValue)
+        {
+            doctorId = _currentUserService.UserId;
+        }
+
+        var result = await _sender.Send(new GetConsultationsQuery(doctorId, patientId));
+        return Ok(result);
+    }
+
+    [HttpGet("{id:guid}")]
+    [Authorize(Roles = "Doctor,Nurse,Admin")]
+    [EndpointSummary("Get consultation by ID")]
     [ProducesResponseType(typeof(ConsultationResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetByAppointment(Guid appointmentId)
+    public async Task<IActionResult> GetById(Guid id)
     {
-        var consultation = await _context.Consultations
-            .Include(c => c.Doctor)
-            .Include(c => c.Prescription)
-                .ThenInclude(p => p.PrescriptionItems)
-                    .ThenInclude(pi => pi.Medicine)
-            .FirstOrDefaultAsync(c => c.AppointmentId == appointmentId);
+        var result = await _sender.Send(new GetConsultationByIdQuery(id));
+        if (result == null)
+            return NotFound(new ProblemDetails { Title = "Not Found", Detail = "Consultation not found", Status = 404 });
 
-        if (consultation == null)
-            return NotFound(new ProblemDetails { Title = "Not Found", Detail = $"Consultation for appointment {appointmentId} not found", Status = 404 });
+        return Ok(result);
+    }
 
-        var doctorName = consultation.Doctor != null
-            ? $"{consultation.Doctor.FirstName} {consultation.Doctor.LastName}"
-            : "Doctor";
+    [HttpGet("by-appointment/{appointmentId:guid}")]
+    [Authorize(Roles = "Doctor,Nurse,Admin,Receptionist")]
+    [EndpointSummary("Get consultation by appointment ID")]
+    [ProducesResponseType(typeof(ConsultationResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetByAppointmentId(Guid appointmentId)
+    {
+        var result = await _sender.Send(new GetConsultationByAppointmentQuery(appointmentId));
+        if (result == null)
+            return NotFound(new ProblemDetails { Title = "Not Found", Detail = "No consultation found for this appointment", Status = 404 });
 
-        var response = new ConsultationResponseDto
-        {
-            Id = consultation.Id,
-            AppointmentId = consultation.AppointmentId,
-            DoctorName = doctorName,
-            Symptoms = consultation.Symptoms,
-            Diagnosis = consultation.Diagnosis,
-            ClinicalNotes = consultation.ClinicalNotes,
-            ConsultedAt = consultation.ConsultedAt
-        };
-
-        return Ok(response);
+        return Ok(result);
     }
 }

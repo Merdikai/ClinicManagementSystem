@@ -67,4 +67,64 @@ public class NotificationService : INotificationService
 
         await _hubContext.Clients.All.InvoicePaid(payload);
     }
+
+    public async Task NotifyRadiologyOrderUpdatedAsync(Guid orderId, Guid patientId, string modality, string status, string message)
+    {
+        var payload = new
+        {
+            OrderId = orderId,
+            PatientId = patientId,
+            Modality = modality,
+            Status = status,
+            Timestamp = DateTime.UtcNow,
+            Message = message
+        };
+
+        await _hubContext.Clients.All.RadiologyOrderUpdated(payload);
+    }
+
+    public async Task NotifyLabOrderUpdatedAsync(Guid orderId, Guid patientId, string orderNumber, string status, bool hasCriticalFlag)
+    {
+        var payload = new
+        {
+            OrderId = orderId,
+            PatientId = patientId,
+            OrderNumber = orderNumber,
+            Status = status,
+            HasCriticalFlag = hasCriticalFlag,
+            Timestamp = DateTime.UtcNow,
+            Message = hasCriticalFlag ? $"CRITICAL ALERT: Lab order {orderNumber} has critical abnormal findings" : $"Lab order {orderNumber} status changed to {status}"
+        };
+
+        await _hubContext.Clients.All.LabOrderUpdated(payload);
+    }
+
+    public async Task NotifyBreakGlassAlertAsync(Guid logId, Guid patientId, Guid userId, string reason)
+    {
+        var payload = new
+        {
+            LogId = logId,
+            PatientId = patientId,
+            UserId = userId,
+            Reason = reason,
+            Timestamp = DateTime.UtcNow,
+            Message = $"EMERGENCY ACCESS: Break-glass access logged on patient record. Reason: {reason}"
+        };
+
+        await _hubContext.Clients.All.BreakGlassAlert(payload);
+    }
+
+    public async Task NotifyDutyRosterChangedAsync(Guid staffId, string role, bool isOnDuty)
+    {
+        var payload = new
+        {
+            StaffId = staffId,
+            Role = role,
+            IsOnDuty = isOnDuty,
+            Timestamp = DateTime.UtcNow,
+            Message = $"Staff duty status updated: {role} is now {(isOnDuty ? "On Duty" : "Off Duty")}"
+        };
+
+        await _hubContext.Clients.All.DutyRosterChanged(payload);
+    }
 }

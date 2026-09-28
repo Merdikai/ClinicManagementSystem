@@ -1,4 +1,8 @@
-﻿using AutoMapper;
+using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using AutoMapper;
 using ClinicManagementSystem.Application.DTOs;
 using ClinicManagementSystem.Application.Interfaces;
 using ClinicManagementSystem.Domain.Interfaces;
@@ -24,7 +28,14 @@ public class GetAppointmentsPagedQueryHandler : IRequestHandler<GetAppointmentsP
 
     public async Task<PagedResponse<AppointmentResponseDto>> Handle(GetAppointmentsPagedQuery request, CancellationToken cancellationToken)
     {
-        var (items, totalCount) = await _appointmentRepository.GetPagedAsync(request.Page, request.PageSize, request.StartDate, request.EndDate);
+        var (items, totalCount) = await _appointmentRepository.GetPagedAsync(
+            request.Page, 
+            request.PageSize, 
+            request.StartDate, 
+            request.EndDate, 
+            request.PatientId, 
+            request.Status);
+
         var dtos = _mapper.Map<IEnumerable<AppointmentResponseDto>>(items).ToList();
 
         foreach (var dto in dtos)

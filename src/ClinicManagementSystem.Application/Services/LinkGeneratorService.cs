@@ -1,4 +1,4 @@
-﻿using ClinicManagementSystem.Application.DTOs;
+using ClinicManagementSystem.Application.DTOs;
 using ClinicManagementSystem.Application.Interfaces;
 
 namespace ClinicManagementSystem.Application.Services;
@@ -54,5 +54,44 @@ public class LinkGeneratorService : ILinkGeneratorService
             new("self", $"/api/v1/medicines/{medicineId}", "GET"),
             new("dispense", $"/api/v1/medicines/{medicineId}/dispense", "PATCH")
         };
+    }
+
+    public List<LinkDto> GenerateRadiologyOrderLinks(Guid orderId, string status)
+    {
+        var links = new List<LinkDto>
+        {
+            new("self", $"/api/v1/radiology/orders/{orderId}", "GET")
+        };
+
+        if (status == "Ordered")
+        {
+            links.Add(new("schedule", $"/api/v1/radiology/orders/{orderId}/schedule", "POST"));
+            links.Add(new("start_scan", $"/api/v1/radiology/orders/{orderId}/status", "PUT"));
+        }
+        else if (status == "InProgress")
+        {
+            links.Add(new("report", $"/api/v1/radiology/orders/{orderId}/report", "POST"));
+        }
+
+        return links;
+    }
+
+    public List<LinkDto> GenerateLabOrderLinks(Guid orderId, string status)
+    {
+        var links = new List<LinkDto>
+        {
+            new("self", $"/api/v1/laborders/{orderId}", "GET")
+        };
+
+        if (status == "Ordered")
+        {
+            links.Add(new("intake_specimen", $"/api/v1/laborders/{orderId}/specimen-intake", "POST"));
+        }
+        else if (status == "SampleCollected" || status == "InProgress")
+        {
+            links.Add(new("enter_results", $"/api/v1/laborders/{orderId}/results", "POST"));
+        }
+
+        return links;
     }
 }

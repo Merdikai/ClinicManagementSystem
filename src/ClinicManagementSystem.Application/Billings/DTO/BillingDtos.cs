@@ -17,6 +17,7 @@ public record CreateInvoiceItemDto(
 public class InvoiceResponseDto
 {
     public Guid Id { get; set; }
+    public Guid PatientId { get; set; }
     public string InvoiceNumber { get; set; } = string.Empty;
     public string PatientName { get; set; } = string.Empty;
     public DateTime IssueDate { get; set; }
@@ -27,6 +28,7 @@ public class InvoiceResponseDto
     public decimal DiscountAmount { get; set; }
     public decimal TotalAmount { get; set; }
     public decimal BalanceDue { get; set; }
+    public string Department { get; set; } = "General";
     public List<InvoiceItemResponseDto> LineItems { get; set; } = new();
     public List<LinkDto>? Links { get; set; }
 }

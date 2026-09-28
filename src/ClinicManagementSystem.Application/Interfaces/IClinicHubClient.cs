@@ -1,4 +1,4 @@
-﻿namespace ClinicManagementSystem.Application.Interfaces;
+namespace ClinicManagementSystem.Application.Interfaces;
 
 public interface IClinicHubClient
 {
@@ -6,4 +6,8 @@ public interface IClinicHubClient
     Task PatientCheckedIn(object payload);
     Task LowStockAlert(object payload);
     Task InvoicePaid(object payload);
+    Task RadiologyOrderUpdated(object payload);
+    Task LabOrderUpdated(object payload);
+    Task BreakGlassAlert(object payload);
+    Task DutyRosterChanged(object payload);
 }

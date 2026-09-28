@@ -35,12 +35,22 @@ public class CreateMedicineCommandHandler : IRequestHandler<CreateMedicineComman
         {
             Code = request.Code,
             Name = request.Name,
+            GenericName = request.GenericName ?? string.Empty,
             Category = request.Category,
+            DosageForm = request.DosageForm ?? "Tablet",
+            Strength = request.Strength ?? string.Empty,
+            Manufacturer = request.Manufacturer ?? string.Empty,
             StockQuantity = request.StockQuantity,
+            ReorderLevel = request.ReorderLevel,
+            CostPrice = request.CostPrice,
             UnitPrice = request.UnitPrice,
             ExpiryDate = request.ExpiryDate,
-            BatchNumber = request.BatchNumber
+            BatchNumber = request.BatchNumber ?? string.Empty,
+            StorageConditions = request.StorageConditions ?? "Room temperature (15-25°C)",
+            IsControlledSubstance = request.IsControlledSubstance,
+            IsActive = request.IsActive
         };
+
 
         await _medicineRepository.AddAsync(medicine);
         await _medicineRepository.SaveChangesAsync();

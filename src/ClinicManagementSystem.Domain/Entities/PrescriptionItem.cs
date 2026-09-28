@@ -1,3 +1,5 @@
+using System;
+
 namespace ClinicManagementSystem.Domain.Entities;
 
 public class PrescriptionItem
@@ -8,6 +10,8 @@ public class PrescriptionItem
     public Guid MedicineId { get; set; }
     public Medicine Medicine { get; set; } = null!;
     public int Quantity { get; set; }
+    public int DispensedQuantity { get; set; }
+    public string Status { get; set; } = "Pending";
     public string DosageInstructions { get; set; } = string.Empty;
     public decimal UnitPrice { get; set; }
     public decimal TotalPrice => Quantity * UnitPrice;

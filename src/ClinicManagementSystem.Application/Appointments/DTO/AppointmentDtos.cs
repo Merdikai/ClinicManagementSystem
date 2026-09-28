@@ -19,6 +19,38 @@ public class AppointmentResponseDto
     public int DurationMinutes { get; set; }
     public string Status { get; set; } = string.Empty;
     public string ReasonForVisit { get; set; } = string.Empty;
+    public string? TriageUrgency { get; set; }
+    public string? RoomAssignment { get; set; }
+    public string? TriageNotes { get; set; }
+    public string? TokenNumber { get; set; }
+    public string? VisitType { get; set; }
     public VitalSignResponseDto? VitalSigns { get; set; }
     public List<LinkDto>? Links { get; set; }
 }
+
+public record CheckInAppointmentDto(
+    string? TokenNumber = null,
+    string? VisitType = null
+);
+
+public record RescheduleAppointmentDto(
+    DateTime NewScheduledDateTime,
+    string? Reason = null
+);
+
+public record MarkNoShowDto(
+    string? Notes = null
+);
+
+public record UpdateAppointmentTriageDto(
+    string? TriageUrgency,
+    string? RoomAssignment,
+    string? TriageNotes,
+    string? Status = null
+);
+
+public record UpdateAppointmentStatusDto(
+    string Status,
+    string? RoomAssignment = null
+);
+

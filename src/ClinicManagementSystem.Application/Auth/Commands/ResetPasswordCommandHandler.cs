@@ -1,4 +1,4 @@
-﻿using ClinicManagementSystem.Application.Common;
+using ClinicManagementSystem.Application.Common;
 using ClinicManagementSystem.Application.Interfaces;
 using ClinicManagementSystem.Domain.Interfaces;
 using MediatR;
@@ -38,6 +38,16 @@ public class ResetPasswordCommandHandler : IRequestHandler<ResetPasswordCommand,
         _userRepository.Update(user);
 
         resetToken.IsUsed = true;
+
+        var activeRefreshTokens = await _context.RefreshTokens
+            .Where(rt => rt.UserId == user.Id && rt.RevokedAt == null)
+            .ToListAsync(cancellationToken);
+
+        foreach (var rt in activeRefreshTokens)
+        {
+            rt.RevokedAt = DateTime.UtcNow;
+        }
+
         await _context.SaveChangesAsync(cancellationToken);
 
         return Result<Unit>.Success(Unit.Value);

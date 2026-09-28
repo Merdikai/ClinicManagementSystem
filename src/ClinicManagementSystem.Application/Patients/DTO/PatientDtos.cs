@@ -49,6 +49,12 @@ public class CreatePatientDto
     public string? Address { get; set; }
     public string? BloodGroup { get; set; }
     public string? EmergencyContact { get; set; }
+    public string? Allergies { get; set; }
+    public string? NationalId { get; set; }
+    public string? InsuranceProvider { get; set; }
+    public string? InsurancePolicyNumber { get; set; }
+    public string? InsuranceCoveragePlan { get; set; }
+    public string? InsuranceEligibilityStatus { get; set; }
 }
 
 public class PatientResponseDto
@@ -64,6 +70,12 @@ public class PatientResponseDto
     public string Address { get; set; } = string.Empty;
     public string BloodGroup { get; set; } = string.Empty;
     public string EmergencyContact { get; set; } = string.Empty;
+    public string Allergies { get; set; } = string.Empty;
+    public string? NationalId { get; set; }
+    public string? InsuranceProvider { get; set; }
+    public string? InsurancePolicyNumber { get; set; }
+    public string? InsuranceCoveragePlan { get; set; }
+    public string? InsuranceEligibilityStatus { get; set; }
     public DateTime RegisteredAt { get; set; }
     public List<LinkDto>? Links { get; set; }
 }

@@ -1,4 +1,4 @@
-﻿using ClinicManagementSystem.Application.Common;
+using ClinicManagementSystem.Application.Common;
 using ClinicManagementSystem.Application.Interfaces;
 using ClinicManagementSystem.Domain.Entities;
 using MediatR;
@@ -23,7 +23,7 @@ public class AssignRoleCommandHandler : IRequestHandler<AssignRoleCommand, Resul
         if (user is null)
             return Result<Unit>.Failure("User not found", "user_not_found");
 
-        var role = await _context.Roles.FirstOrDefaultAsync(r => r.Name == request.RoleName, cancellationToken);
+        var role = await _context.Roles.FirstOrDefaultAsync(r => r.Name.ToLower() == request.RoleName.ToLower(), cancellationToken);
         if (role is null)
             return Result<Unit>.Failure("Role not found", "role_not_found");
 

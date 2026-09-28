@@ -19,6 +19,8 @@ public class Invoice
     public decimal DiscountAmount { get; set; }
     public decimal TotalAmount { get; set; }
     public decimal BalanceDue => TotalAmount - (Payments?.Sum(p => p.AmountPaid) ?? 0);
+    public string Department { get; set; } = "General"; // Consultation, Pharmacy, Laboratory, Nursing, General
+    public string? BillingNotes { get; set; }
 
     public ICollection<InvoiceItem> LineItems { get; set; } = new List<InvoiceItem>();
     public ICollection<Payment> Payments { get; set; } = new List<Payment>();

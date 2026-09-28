@@ -1,4 +1,4 @@
-﻿namespace ClinicManagementSystem.Application.DTOs;
+namespace ClinicManagementSystem.Application.DTOs;
 
 public record CreatePrescriptionDto(
     Guid ConsultationId,
@@ -15,6 +15,7 @@ public record CreatePrescriptionItemDto(
 public class PrescriptionResponseDto
 {
     public Guid Id { get; set; }
+    public Guid ConsultationId { get; set; }
     public DateTime IssuedAt { get; set; }
     public string Notes { get; set; } = string.Empty;
     public List<PrescriptionItemResponseDto> Items { get; set; } = new();
@@ -22,6 +23,8 @@ public class PrescriptionResponseDto
 
 public class PrescriptionItemResponseDto
 {
+    public Guid Id { get; set; }
+    public Guid MedicineId { get; set; }
     public string MedicineName { get; set; } = string.Empty;
     public int Quantity { get; set; }
     public string DosageInstructions { get; set; } = string.Empty;
@@ -29,7 +32,7 @@ public class PrescriptionItemResponseDto
     public decimal TotalPrice { get; set; }
 }
 
-public record DispensePrescriptionDto(Guid PrescriptionId);
+public record DispensePrescriptionDto(Guid PrescriptionId, string? VerificationNotes = null);
 public record DispensedItemDto(
     string MedicineName,
     int RequestedQuantity,
@@ -42,5 +45,8 @@ public record DispenseResponseDto(
     Guid PrescriptionId,
     bool FullyDispensed,
     List<DispensedItemDto> Items,
-    decimal TotalCost
+    decimal TotalCost,
+    string Status = "Dispensed",
+    DateTime? DispensedAt = null
 );
+

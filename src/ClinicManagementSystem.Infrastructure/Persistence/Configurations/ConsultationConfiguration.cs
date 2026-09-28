@@ -23,10 +23,14 @@ public class ConsultationConfiguration : IEntityTypeConfiguration<Consultation>
         builder.Property(c => c.ClinicalNotes)
             .HasMaxLength(2000);
 
+        builder.Property(c => c.Findings).HasMaxLength(2000);
+
         builder.Property(c => c.Symptoms)
             .HasMaxLength(1000);
 
         builder.Property(c => c.Diagnosis)
             .HasMaxLength(1000);
+
+        builder.HasQueryFilter(c => !c.Appointment.IsDeleted);
     }
 }
