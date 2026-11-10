@@ -28,28 +28,34 @@ public class PatientsController : ControllerBase
     [EndpointSummary("Get current authenticated patient record")]
     [ProducesResponseType(typeof(PatientResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetCurrentPatient()
     {
         var email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value 
-            ?? User.FindFirst("email")?.Value
-            ?? User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
+            ?? User.FindFirst("email")?.Value;
+        var username = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
 
-        // If anonymous or simulation without specific email, fall back to Alice
-        if (string.IsNullOrWhiteSpace(email))
+        if (string.IsNullOrWhiteSpace(email) && string.IsNullOrWhiteSpace(username))
         {
-            email = "alice.patient@clinic.com";
+            return Unauthorized(new ProblemDetails
+            {
+                Title = "Unauthorized",
+                Detail = "Authenticated user identity claims are missing.",
+                Status = StatusCodes.Status401Unauthorized
+            });
         }
 
-        var patient = await _context.Patients.FirstOrDefaultAsync(p => p.Email == email);
-        if (patient is null && (email.Equals("alice.patient@clinic.com", StringComparison.OrdinalIgnoreCase) || email.Contains("alice")))
-        {
-            patient = await _context.Patients.FirstOrDefaultAsync(p => p.FirstName == "Alice");
-        }
+        var patient = await _context.Patients.FirstOrDefaultAsync(p => 
+            (!string.IsNullOrEmpty(email) && p.Email == email) || 
+            (!string.IsNullOrEmpty(username) && p.Email == username));
 
         // If patient record does not exist yet, check if a registered user exists and auto-provision patient chart
         if (patient is null)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+            var user = await _context.Users.FirstOrDefaultAsync(u => 
+                (!string.IsNullOrEmpty(email) && u.Email == email) || 
+                (!string.IsNullOrEmpty(username) && (u.Username == username || u.Email == username)));
+
             if (user != null)
             {
                 patient = new Patient
@@ -75,7 +81,7 @@ public class PatientsController : ControllerBase
             return NotFound(new ProblemDetails
             {
                 Title = "Not Found",
-                Detail = $"No patient record found for '{email}'.",
+                Detail = "No patient record found for authenticated user.",
                 Status = 404
             });
         }
@@ -157,16 +163,16 @@ public class PatientsController : ControllerBase
     private async Task<Guid?> GetCurrentPatientIdAsync()
     {
         var email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value 
-            ?? User.FindFirst("email")?.Value
-            ?? User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
-        if (string.IsNullOrWhiteSpace(email))
-            email = "alice.patient@clinic.com";
+            ?? User.FindFirst("email")?.Value;
+        var username = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
 
-        var pat = await _context.Patients.FirstOrDefaultAsync(p => p.Email == email);
-        if (pat is null && (email.Equals("alice.patient@clinic.com", StringComparison.OrdinalIgnoreCase) || email.Contains("alice")))
-        {
-            pat = await _context.Patients.FirstOrDefaultAsync(p => p.FirstName == "Alice");
-        }
+        if (string.IsNullOrWhiteSpace(email) && string.IsNullOrWhiteSpace(username))
+            return null;
+
+        var pat = await _context.Patients.FirstOrDefaultAsync(p => 
+            (!string.IsNullOrEmpty(email) && p.Email == email) ||
+            (!string.IsNullOrEmpty(username) && p.Email == username));
+
         return pat?.Id;
     }
 

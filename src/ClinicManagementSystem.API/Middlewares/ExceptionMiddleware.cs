@@ -1,4 +1,5 @@
 using ClinicManagementSystem.Application.Exceptions;
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
 
@@ -20,6 +21,30 @@ public class ExceptionMiddleware
         try
         {
             await _next(context);
+        }
+        catch (ValidationException ex)
+        {
+            _logger.LogWarning("Validation failed: {Errors}", string.Join("; ", ex.Errors.Select(e => $"{e.PropertyName}: {e.ErrorMessage}")));
+            context.Response.StatusCode = StatusCodes.Status400BadRequest;
+
+            var errors = ex.Errors
+                .GroupBy(e => e.PropertyName)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Select(e => e.ErrorMessage).ToArray()
+                );
+
+            var problemDetails = new ProblemDetails
+            {
+                Title = "Validation Failed",
+                Detail = "One or more validation errors occurred.",
+                Status = StatusCodes.Status400BadRequest,
+                Instance = context.Request.Path
+            };
+            problemDetails.Extensions.Add("errors", errors);
+
+            context.Response.ContentType = "application/problem+json";
+            await context.Response.WriteAsJsonAsync(problemDetails);
         }
         catch (NotFoundException ex)
         {

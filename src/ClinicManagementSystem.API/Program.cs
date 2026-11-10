@@ -37,14 +37,17 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ClinicManagementSystem.Application.Interfaces.ICurrentUserService, ClinicManagementSystem.API.Services.CurrentUserService>();
 
 // ─── CORS ───
+var configuredOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+var defaultOrigins = new[] { "http://localhost:4200", "http://localhost:5041", "http://localhost:8080" };
+var allowedOrigins = (configuredOrigins != null && configuredOrigins.Length > 0)
+    ? configuredOrigins
+    : defaultOrigins;
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAngularDev", policy =>
     {
-        policy.WithOrigins(
-                "http://localhost:4200",      // Angular dev server
-                "http://localhost:5041"       // Swagger
-            )
+        policy.WithOrigins(allowedOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -92,6 +95,20 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = builder.Configuration["Jwt:Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(jwtKey))
+    };
+
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+            {
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
     };
 });
 
