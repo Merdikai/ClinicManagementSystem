@@ -14,6 +14,14 @@ public static class RateLimitingExtensions
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
+            // ─── Qiyas M11 Session 3: Dedicated Login Rate Limit Policy ───
+            options.AddFixedWindowLimiter("LoginPolicy", opt =>
+            {
+                opt.PermitLimit = 5;
+                opt.Window = TimeSpan.FromMinutes(1);
+                opt.QueueLimit = 0;
+            });
+
             // ─── Anonymous Policy (No Authentication) ───
             options.AddPolicy(RateLimitingConstants.AnonymousPolicy, httpContext =>
                 RateLimitPartition.GetTokenBucketLimiter(

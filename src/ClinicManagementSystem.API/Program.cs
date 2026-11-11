@@ -20,6 +20,10 @@ using MediatR;
 using ClinicManagementSystem.Application.Reports.Queries;
 using ClinicManagementSystem.API.Hubs;
 using ClinicManagementSystem.API.Services;
+using ClinicManagementSystem.API.Authorization;
+using Microsoft.AspNetCore.Authorization;
+using ClinicManagementSystem.Application.Services;
+using ClinicManagementSystem.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -141,6 +145,17 @@ builder.Services.AddHybridCache(options =>
 });
 #pragma warning restore EXTEXP0018
 
+// ─── Centralized Exception Handling & RFC 7807 (Qiyas M7 S1 & M10 S3) ───
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+
+// ─── Asynchronous Report Queue & Background Worker (Qiyas M7 S2) ───
+builder.Services.AddSingleton<IAsyncReportQueue, AsyncReportQueue>();
+builder.Services.AddHostedService<AsyncReportBackgroundWorker>();
+
+// ─── Resource-Based Authorization (Qiyas M11 S3) ───
+builder.Services.AddScoped<IAuthorizationHandler, AppointmentResourceHandler>();
+
 // ─── Controllers & Swagger ───
 builder.Services.AddControllers(options =>
 {
@@ -214,8 +229,18 @@ using (var scope = app.Services.CreateScope())
 }
 
 // ─── Middleware Pipeline ───
-app.UseMiddleware<RequestLoggingMiddleware>();   // ← First: log everything
-app.UseMiddleware<ExceptionMiddleware>();        // ← Second: catch exceptions
+app.UseExceptionHandler();                      // ← Modern .NET 10 IExceptionHandler
+app.UseStatusCodePages();                        // ← RFC 7807 for empty status codes
+app.UseMiddleware<RequestLoggingMiddleware>();   // ← Log incoming requests
+
+// ─── Security Headers (Qiyas M11 S3) ───
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.Append("X-Frame-Options", "DENY");
+    context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+    context.Response.Headers.Append("Content-Security-Policy", "default-src 'self'; img-src 'self' data: https:; font-src 'self' data:;");
+    await next();
+});
 
 if (app.Environment.IsDevelopment())
 {

@@ -1,7 +1,9 @@
 using Asp.Versioning;
 using ClinicManagementSystem.Application.DTOs;
+using ClinicManagementSystem.Application.Extensions;
 using ClinicManagementSystem.Application.Reports.DTOs;
 using ClinicManagementSystem.Application.Reports.Queries;
+using ClinicManagementSystem.Application.Services;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,10 +17,12 @@ namespace ClinicManagementSystem.API.Controllers;
 public class ReportsController : ControllerBase
 {
     private readonly ISender _sender;
+    private readonly IAsyncReportQueue _reportQueue;
 
-    public ReportsController(ISender sender)
+    public ReportsController(ISender sender, IAsyncReportQueue reportQueue)
     {
         _sender = sender;
+        _reportQueue = reportQueue;
     }
 
     [HttpGet("dashboard")]
@@ -42,23 +46,73 @@ public class ReportsController : ControllerBase
     }
 
     [HttpGet("top-medicines")]
-    [EndpointSummary("Get top prescribed medicines")]
-    [ProducesResponseType(typeof(IEnumerable<TopMedicineDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetTopMedicines([FromQuery] int count = 5)
+    [EndpointSummary("Get top prescribed medicines with optional data shaping")]
+    [ProducesResponseType(typeof(IEnumerable<object>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetTopMedicines([FromQuery] int count = 5, [FromQuery] string? fields = null)
     {
         var medicines = await _sender.Send(new GetTopMedicinesQuery(count));
-        return Ok(medicines);
+        var shaped = medicines.ShapeData(fields);
+        return Ok(shaped);
     }
 
     [HttpGet("doctor-appointments")]
-    [EndpointSummary("Get appointment counts per doctor for a date range")]
-    [ProducesResponseType(typeof(IEnumerable<DoctorAppointmentCountDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetDoctorAppointments([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
+    [EndpointSummary("Get appointment counts per doctor for a date range with optional data shaping")]
+    [ProducesResponseType(typeof(IEnumerable<object>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetDoctorAppointments([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate, [FromQuery] string? fields = null)
     {
         var start = startDate ?? DateTime.UtcNow.AddDays(-30);
         var end = endDate ?? DateTime.UtcNow;
         var counts = await _sender.Send(new GetDoctorAppointmentCountsQuery(start, end));
-        return Ok(counts);
+        var shaped = counts.ShapeData(fields);
+        return Ok(shaped);
+    }
+
+    // ─── Qiyas M7 Session 2: Background Worker with 202 Accepted & Status Polling ───
+    [HttpPost("async-summary")]
+    [EndpointSummary("Queue background report generation and return 202 Accepted")]
+    [ProducesResponseType(StatusCodes.Status202Accepted)]
+    public async Task<IActionResult> RequestAsyncReport([FromBody] AsyncReportRequestDto request, CancellationToken ct)
+    {
+        var jobId = Guid.NewGuid().ToString("N")[..8];
+        var username = User.Identity?.Name ?? "Anonymous";
+
+        var job = new AsyncReportJob(
+            jobId,
+            request.ReportType ?? "ClinicalExecutiveSummary",
+            username,
+            DateTime.UtcNow,
+            System.Text.Json.JsonSerializer.Serialize(request)
+        );
+
+        await _reportQueue.EnqueueAsync(job, ct);
+
+        var statusUrl = Url.Action(nameof(GetAsyncReportStatus), new { jobId });
+
+        return Accepted(statusUrl, new
+        {
+            JobId = jobId,
+            Status = "Queued",
+            StatusUrl = statusUrl,
+            Message = "Report generation has been queued for background processing."
+        });
+    }
+
+    [HttpGet("async-summary/{jobId}/status", Name = nameof(GetAsyncReportStatus))]
+    [EndpointSummary("Poll status of asynchronous background report job")]
+    [ProducesResponseType(typeof(AsyncReportStatus), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public IActionResult GetAsyncReportStatus(string jobId)
+    {
+        var status = _reportQueue.GetStatus(jobId);
+        if (status is null)
+            return NotFound(new ProblemDetails
+            {
+                Title = "Report Job Not Found",
+                Detail = $"No background report found with ID '{jobId}'.",
+                Status = StatusCodes.Status404NotFound
+            });
+
+        return Ok(status);
     }
 
     [HttpGet("export/patients")]

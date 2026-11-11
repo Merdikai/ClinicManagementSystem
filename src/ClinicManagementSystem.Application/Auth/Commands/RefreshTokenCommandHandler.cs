@@ -1,4 +1,4 @@
-﻿using ClinicManagementSystem.Application.DTOs;
+using ClinicManagementSystem.Application.DTOs;
 using ClinicManagementSystem.Application.Exceptions;
 using ClinicManagementSystem.Application.Interfaces;
 using ClinicManagementSystem.Domain.Entities;
@@ -27,7 +27,28 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, A
                     .ThenInclude(ur => ur.Role)
             .FirstOrDefaultAsync(r => r.Token == request.RefreshToken, cancellationToken);
 
-        if (tokenRecord is null || !tokenRecord.IsActive)
+        if (tokenRecord is null)
+            throw new BusinessRuleViolationException("Invalid or expired refresh token.", "invalid_refresh_token");
+
+        // Qiyas M11 Session 2 Theft Detection:
+        // If an already-used or revoked refresh token is presented again, the token family is compromised!
+        if (tokenRecord.RevokedAt is not null)
+        {
+            var compromisedTokens = await _context.RefreshTokens
+                .Where(r => r.UserId == tokenRecord.UserId && r.RevokedAt == null)
+                .ToListAsync(cancellationToken);
+
+            foreach (var t in compromisedTokens)
+            {
+                t.RevokedAt = DateTime.UtcNow;
+            }
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            throw new SecurityAlertException("Security alert: Refresh token reuse detected. All active sessions have been revoked.", "refresh_token_reuse_detected");
+        }
+
+        if (!tokenRecord.IsActive)
             throw new BusinessRuleViolationException("Invalid or expired refresh token.", "invalid_refresh_token");
 
         var user = tokenRecord.User;
