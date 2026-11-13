@@ -10,4 +10,5 @@ public interface INotificationService
     Task NotifyLabOrderUpdatedAsync(Guid orderId, Guid patientId, string orderNumber, string status, bool hasCriticalFlag);
     Task NotifyBreakGlassAlertAsync(Guid logId, Guid patientId, Guid userId, string reason);
     Task NotifyDutyRosterChangedAsync(Guid staffId, string role, bool isOnDuty);
+    Task NotifyReportReadyAsync(string? userId, string jobId, string reportType, string downloadUrl);
 }

@@ -23,6 +23,7 @@ public class GetPrescriptionByIdQueryHandler : IRequestHandler<GetPrescriptionBy
     public async Task<PrescriptionDto?> Handle(GetPrescriptionByIdQuery request, CancellationToken cancellationToken)
     {
         var p = await _context.Prescriptions
+            .AsNoTracking()
             .Include(p => p.Consultation)
                 .ThenInclude(c => c.Appointment)
                     .ThenInclude(a => a.Patient)

@@ -24,15 +24,7 @@ public class GetAllPrescriptionsQueryHandler : IRequestHandler<GetAllPrescriptio
     public async Task<List<PrescriptionDto>> Handle(GetAllPrescriptionsQuery request, CancellationToken cancellationToken)
     {
         var query = _context.Prescriptions
-            .Include(p => p.Consultation)
-                .ThenInclude(c => c.Appointment)
-                    .ThenInclude(a => a.Patient)
-            .Include(p => p.Consultation)
-                .ThenInclude(c => c.Doctor)
-            .Include(p => p.DispensedByUser)
-            .Include(p => p.Invoice)
-            .Include(p => p.PrescriptionItems)
-                .ThenInclude(pi => pi.Medicine)
+            .AsNoTracking()
             .AsQueryable();
 
         if (request.PatientId.HasValue && request.PatientId.Value != Guid.Empty)

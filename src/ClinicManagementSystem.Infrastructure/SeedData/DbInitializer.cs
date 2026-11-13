@@ -189,9 +189,13 @@ public static class DbInitializer
                 .Where(rp => rp.RoleId == kvp.Key)
                 .ToListAsync();
 
-            context.RolePermissions.RemoveRange(existing);
+            if (existing.Count != 0)
+            {
+                context.RolePermissions.RemoveRange(existing);
+                await context.SaveChangesAsync();
+            }
 
-            foreach (var p in kvp.Value)
+            foreach (var p in kvp.Value.Distinct())
             {
                 context.RolePermissions.Add(new RolePermission
                 {

@@ -11,4 +11,9 @@ public class ForbiddenAccessException : Exception
         : base(message)
     {
     }
+
+    public ForbiddenAccessException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
 }

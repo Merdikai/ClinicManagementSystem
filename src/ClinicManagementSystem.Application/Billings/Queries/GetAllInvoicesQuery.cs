@@ -27,10 +27,11 @@ public class GetAllInvoicesQueryHandler : IRequestHandler<GetAllInvoicesQuery, I
     public async Task<IEnumerable<InvoiceResponseDto>> Handle(GetAllInvoicesQuery request, CancellationToken cancellationToken)
     {
         var query = _context.Invoices
+            .AsNoTracking()
             .Include(i => i.Patient)
             .Include(i => i.LineItems)
             .Include(i => i.Payments)
-            .AsNoTracking();
+            .AsQueryable();
 
         if (request.PatientId.HasValue && request.PatientId.Value != Guid.Empty)
         {

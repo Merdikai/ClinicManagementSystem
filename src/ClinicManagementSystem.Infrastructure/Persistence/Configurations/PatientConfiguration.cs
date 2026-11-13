@@ -45,5 +45,12 @@ public class PatientConfiguration : IEntityTypeConfiguration<Patient>
 
         builder.Property(p => p.EmergencyContact)
             .HasMaxLength(100);
+
+        builder.HasQueryFilter(p => !p.IsDeleted);
+
+        builder.Property(p => p.RowVersion)
+            .IsRowVersion()
+            .HasColumnName("xmin")
+            .HasColumnType("xid");
     }
 }

@@ -28,7 +28,7 @@ public class NotificationsController : ControllerBase
         _mapper = mapper;
     }
 
-    [AllowAnonymous]
+    [Authorize(Roles = "Admin,Doctor,Nurse,Receptionist")]
     [HttpPost("test")]
     public async Task<IActionResult> TestNotification([FromBody] BroadcastAlertRequest? request = null)
     {

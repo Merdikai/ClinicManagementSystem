@@ -47,5 +47,7 @@ public class ControlledSubstanceLogConfiguration : IEntityTypeConfiguration<Cont
             .WithMany()
             .HasForeignKey(c => c.DispensingPharmacistUserId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasQueryFilter(c => !c.Medicine.IsDeleted && !c.Patient.IsDeleted);
     }
 }

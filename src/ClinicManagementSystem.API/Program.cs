@@ -1,50 +1,81 @@
-using ClinicManagementSystem.Application;
-using ClinicManagementSystem.Infrastructure;
-using ClinicManagementSystem.Infrastructure.Persistence.Context;
-using Microsoft.EntityFrameworkCore;
-using ClinicManagementSystem.API.Middlewares;
-using ClinicManagementSystem.API.Filters;
-using ClinicManagementSystem.Infrastructure.SeedData;
-using System.Text;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using ClinicManagementSystem.Infrastructure.Identity;
-using Microsoft.OpenApi.Models;
-using Microsoft.AspNetCore.Mvc;
-using ClinicManagementSystem.Application.Interfaces;
-using ClinicManagementSystem.API.Extensions;
 using Asp.Versioning;
+using ClinicManagementSystem.API.Authorization;
+using ClinicManagementSystem.API.Extensions;
+using ClinicManagementSystem.API.Filters;
+using ClinicManagementSystem.API.Hubs;
+using ClinicManagementSystem.API.Middlewares;
+using ClinicManagementSystem.API.Options;
+using ClinicManagementSystem.API.Services;
+using ClinicManagementSystem.Application;
+using ClinicManagementSystem.Application.Interfaces;
+using ClinicManagementSystem.Application.Options;
+using ClinicManagementSystem.Application.Reports.Queries;
+using ClinicManagementSystem.Application.Services;
+using ClinicManagementSystem.Infrastructure;
+using ClinicManagementSystem.Infrastructure.Identity;
+using ClinicManagementSystem.Infrastructure.Persistence.Context;
+using ClinicManagementSystem.Infrastructure.SeedData;
+using ClinicManagementSystem.Infrastructure.Services;
 using Hangfire;
 using Hangfire.PostgreSql;
 using MediatR;
-using ClinicManagementSystem.Application.Reports.Queries;
-using ClinicManagementSystem.API.Hubs;
-using ClinicManagementSystem.API.Services;
-using ClinicManagementSystem.API.Authorization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
-using ClinicManagementSystem.Application.Services;
-using ClinicManagementSystem.Infrastructure.Services;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OpenApi;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
+using Scalar.AspNetCore;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Host.UseDefaultServiceProvider((context, options) =>
+{
+    options.ValidateScopes = context.HostingEnvironment.IsDevelopment();
+    options.ValidateOnBuild = context.HostingEnvironment.IsDevelopment();
+});
+
+// ─── Typed Validated Options (M4) ───
+builder.Services.AddOptions<JwtOptions>()
+    .BindConfiguration(JwtOptions.SectionName)
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services.AddOptions<EmailOptions>()
+    .BindConfiguration(EmailOptions.SectionName)
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services.AddOptions<CorsOptions>()
+    .BindConfiguration(CorsOptions.SectionName)
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
 // ─── Database ───
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection must be configured via User Secrets or environment variables.");
+
 builder.Services.AddDbContext<ClinicDbContext>(options =>
     options.UseNpgsql(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
-        npgsqlOptions => npgsqlOptions.EnableRetryOnFailure(3)
+        connectionString,
+        npgsqlOptions => npgsqlOptions
+            .EnableRetryOnFailure(3)
+            .UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
     ));
 
 // ─── Application & Infrastructure Services ───
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices();
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<ClinicManagementSystem.Application.Interfaces.ICurrentUserService, ClinicManagementSystem.API.Services.CurrentUserService>();
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
 // ─── CORS ───
-var configuredOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+var corsOptions = builder.Configuration.GetSection(CorsOptions.SectionName).Get<CorsOptions>();
 var defaultOrigins = new[] { "http://localhost:4200", "http://localhost:5041", "http://localhost:8080" };
-var allowedOrigins = (configuredOrigins != null && configuredOrigins.Length > 0)
-    ? configuredOrigins
+var allowedOrigins = (corsOptions?.AllowedOrigins is { Length: > 0 })
+    ? corsOptions.AllowedOrigins
     : defaultOrigins;
 
 builder.Services.AddCors(options =>
@@ -54,8 +85,19 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(allowedOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod()
-            .AllowCredentials();
+            .AllowCredentials()
+            .SetPreflightMaxAge(TimeSpan.FromHours(1));
     });
+});
+
+// ─── Antiforgery (XSRF protection for HttpOnly refresh cookie) ───
+builder.Services.AddAntiforgery(options =>
+{
+    options.HeaderName = "X-XSRF-TOKEN";
+    options.Cookie.Name = ".AspNetCore.Antiforgery.Clinic";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 });
 
 // ─── Health Checks ───
@@ -81,7 +123,11 @@ builder.Services.AddApiVersioning(options =>
 });
 
 // ─── JWT Authentication ───
-var jwtKey = builder.Configuration["Jwt:Key"]!;
+var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
+    ?? throw new InvalidOperationException("Jwt configuration section is missing.");
+if (string.IsNullOrWhiteSpace(jwtOptions.Key) || jwtOptions.Key.Length < 32)
+    throw new InvalidOperationException("Jwt:Key must be configured with at least 32 characters via User Secrets or environment variables.");
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -95,10 +141,10 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-        ValidIssuer = builder.Configuration["Jwt:Issuer"],
-        ValidAudience = builder.Configuration["Jwt:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(jwtKey))
+        ClockSkew = TimeSpan.FromSeconds(30),
+        ValidIssuer = jwtOptions.Issuer,
+        ValidAudience = jwtOptions.Audience,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key))
     };
 
     options.Events = new JwtBearerEvents
@@ -125,44 +171,65 @@ builder.Services.AddCustomRateLimiting();
 
 // ─── Hangfire ───
 builder.Services.AddHangfire(config =>
-    config.UsePostgreSqlStorage(options => 
-        options.UseNpgsqlConnection(builder.Configuration.GetConnectionString("DefaultConnection"))));
+    config.UsePostgreSqlStorage(options =>
+        options.UseNpgsqlConnection(connectionString)));
 builder.Services.AddHangfireServer();
 
 // ─── SignalR & Notifications ───
 builder.Services.AddSignalR();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 
-// ─── HybridCache (L1/L2 TTLs from M7) ───
+// ─── HybridCache (L1 in-memory + optional Redis L2 from M7) ───
+var redisConnection = builder.Configuration["Redis:ConnectionString"];
+if (!string.IsNullOrWhiteSpace(redisConnection))
+{
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = redisConnection;
+        options.InstanceName = "ClinicMgmt:";
+    });
+}
+
 #pragma warning disable EXTEXP0018
 builder.Services.AddHybridCache(options =>
 {
     options.DefaultEntryOptions = new Microsoft.Extensions.Caching.Hybrid.HybridCacheEntryOptions
     {
-        Expiration = TimeSpan.FromMinutes(10),       // L2 TTL
-        LocalCacheExpiration = TimeSpan.FromMinutes(2) // L1 in-memory TTL
+        Expiration = TimeSpan.FromMinutes(10),
+        LocalCacheExpiration = TimeSpan.FromMinutes(2)
     };
 });
 #pragma warning restore EXTEXP0018
 
-// ─── Centralized Exception Handling & RFC 7807 (Qiyas M7 S1 & M10 S3) ───
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+});
+
+// ─── Centralized Exception Handling & RFC 9457 / 7807 ───
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
-// ─── Asynchronous Report Queue & Background Worker (Qiyas M7 S2) ───
+// ─── Asynchronous Report Queue & Background Worker ───
 builder.Services.AddSingleton<IAsyncReportQueue, AsyncReportQueue>();
 builder.Services.AddHostedService<AsyncReportBackgroundWorker>();
 
-// ─── Resource-Based Authorization (Qiyas M11 S3) ───
+// ─── Resource-Based Authorization (M12) ───
 builder.Services.AddScoped<IAuthorizationHandler, AppointmentResourceHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, AppointmentDtoResourceHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, PatientResourceHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, InvoiceResourceHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, PrescriptionResourceHandler>();
 
-// ─── Controllers & Swagger ───
+// ─── Controllers & OpenAPI/Swagger ───
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<ValidationFilter>();
+}).AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.DictionaryKeyPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
 });
 
-// ─── ProblemDetails for validation errors ───
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
     options.InvalidModelStateResponseFactory = context =>
@@ -191,82 +258,108 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 });
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
+static void ConfigureOpenApiDocument(OpenApiOptions options, string versionLabel)
 {
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    options.AddDocumentTransformer((document, context, ct) =>
     {
-        Name = "Authorization",
-        Type = SecuritySchemeType.Http,
-        Scheme = "bearer",
-        BearerFormat = "JWT",
-        In = ParameterLocation.Header,
-        Description = "Enter 'Bearer' followed by a space and your JWT token."
-    });
-
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
+        document.Info.Title = $"Clinic Management System API {versionLabel}";
+        document.Info.Version = versionLabel;
+        document.Components ??= new OpenApiComponents();
+        document.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>();
+        document.Components.SecuritySchemes["Bearer"] = new OpenApiSecurityScheme
         {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
-        }
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+            In = ParameterLocation.Header,
+            Description = "Enter JWT Bearer token."
+        };
+        document.Security ??= [];
+        document.Security.Add(new OpenApiSecurityRequirement
+        {
+            [new OpenApiSecuritySchemeReference("Bearer", document)] = []
+        });
+        return Task.CompletedTask;
     });
-});
+}
+
+builder.Services.AddOpenApi("v1", options => ConfigureOpenApiDocument(options, "v1"));
+builder.Services.AddOpenApi("v2", options => ConfigureOpenApiDocument(options, "v2"));
 
 var app = builder.Build();
 
-// ─── Seed Database ───
+// ─── Apply Pending Migrations / Seed Database ───
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<ClinicDbContext>();
+    await context.Database.MigrateAsync();
     await DbInitializer.SeedAsync(context);
 }
 
-// ─── Middleware Pipeline ───
-app.UseExceptionHandler();                      // ← Modern .NET 10 IExceptionHandler
-app.UseStatusCodePages();                        // ← RFC 7807 for empty status codes
-app.UseMiddleware<RequestLoggingMiddleware>();   // ← Log incoming requests
+// ─── Correlation ID before exception handling so errors always carry trace correlation ───
+app.Use(async (context, next) =>
+{
+    var correlationId = context.Request.Headers["X-Correlation-Id"].FirstOrDefault() ?? Guid.NewGuid().ToString();
+    context.Items["CorrelationId"] = correlationId;
+    context.Response.Headers["X-Correlation-Id"] = correlationId;
+    await next();
+});
 
-// ─── Security Headers (Qiyas M11 S3) ───
+// ─── Middleware Pipeline ───
+app.UseExceptionHandler();
+app.UseStatusCodePages();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+}
+
+// ─── Hardened Security Headers (M12) ───
 app.Use(async (context, next) =>
 {
     context.Response.Headers.Append("X-Frame-Options", "DENY");
     context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
-    context.Response.Headers.Append("Content-Security-Policy", "default-src 'self'; img-src 'self' data: https:; font-src 'self' data:;");
+    context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
+    context.Response.Headers.Append("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+    context.Response.Headers.Append("X-Permitted-Cross-Domain-Policies", "none");
+
+    var isDocsRoute = context.Request.Path.StartsWithSegments("/openapi") ||
+                      context.Request.Path.StartsWithSegments("/scalar");
+    if (!isDocsRoute)
+    {
+        context.Response.Headers.Append(
+            "Content-Security-Policy",
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; object-src 'none'; frame-ancestors 'none'; base-uri 'self';");
+    }
+
     await next();
 });
 
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
+    app.MapOpenApi();
+    app.MapScalarApiReference(options =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "ClinicManagementSystem.API v1");
-        c.DocumentTitle = "Clinic Management System API";
-        c.DisplayRequestDuration();
-        c.EnableDeepLinking();
-        c.ConfigObject = new Swashbuckle.AspNetCore.SwaggerUI.ConfigObject
-        {
-            PersistAuthorization = true,
-            DeepLinking = true
-        };
+        options.WithTitle("Clinic Management System API")
+               .AddDocument("v1", "Clinic API v1", "/openapi/v1.json")
+               .AddDocument("v2", "Clinic API v2", "/openapi/v2.json");
     });
 }
 
+app.UseResponseCompression();
 app.UseStaticFiles();
 app.UseDeprecationHeaders();
 app.UseHttpsRedirection();
 app.UseCors("AllowAngularDev");
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<RequestLoggingMiddleware>();
+app.UseLoginRateLimitPartitioning();
 app.UseRateLimiter();
-app.UseHangfireDashboard("/hangfire");
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = [new HangfireAdminAuthorizationFilter()]
+});
 
 app.MapHealthChecks("/health").DisableRateLimiting();
 app.MapGet("/", () => Results.Ok("Clinic Management API is running"));
@@ -284,3 +377,5 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
+
+public partial class Program { }

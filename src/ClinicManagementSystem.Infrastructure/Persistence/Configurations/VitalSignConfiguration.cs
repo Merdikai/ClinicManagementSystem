@@ -25,6 +25,6 @@ public class VitalSignConfiguration : IEntityTypeConfiguration<VitalSign>
             .HasForeignKey(vs => vs.ConsultationId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasQueryFilter(vs => !vs.Appointment.IsDeleted);
+        builder.HasQueryFilter(vs => !vs.Appointment.IsDeleted && !vs.Appointment.Patient.IsDeleted);
     }
 }

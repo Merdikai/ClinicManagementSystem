@@ -770,6 +770,9 @@ namespace ClinicManagementSystem.Infrastructure.Migrations
                     b.Property<string>("BillingNotes")
                         .HasColumnType("text");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Department")
                         .IsRequired()
                         .HasColumnType("text");
@@ -785,6 +788,9 @@ namespace ClinicManagementSystem.Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime>("IssueDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -799,6 +805,12 @@ namespace ClinicManagementSystem.Infrastructure.Migrations
 
                     b.Property<Guid>("PatientId")
                         .HasColumnType("uuid");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -1436,6 +1448,9 @@ namespace ClinicManagementSystem.Infrastructure.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("DosageForm")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -1453,6 +1468,9 @@ namespace ClinicManagementSystem.Infrastructure.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<bool>("IsControlledSubstance")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
                     b.Property<DateTime>("LastUpdated")
@@ -1476,6 +1494,12 @@ namespace ClinicManagementSystem.Infrastructure.Migrations
 
                     b.Property<int>("ReorderLevel")
                         .HasColumnType("integer");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.Property<int>("StockQuantity")
                         .HasColumnType("integer");
@@ -1656,6 +1680,9 @@ namespace ClinicManagementSystem.Infrastructure.Migrations
                     b.Property<DateTime>("DateOfBirth")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -1688,6 +1715,9 @@ namespace ClinicManagementSystem.Infrastructure.Migrations
                     b.Property<string>("InsuranceProvider")
                         .HasColumnType("text");
 
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -1717,6 +1747,12 @@ namespace ClinicManagementSystem.Infrastructure.Migrations
 
                     b.Property<DateTime>("RegisteredAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id");
 
@@ -2021,6 +2057,9 @@ namespace ClinicManagementSystem.Infrastructure.Migrations
                     b.Property<Guid>("ConsultationId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime?>("DispensedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -2029,6 +2068,9 @@ namespace ClinicManagementSystem.Infrastructure.Migrations
 
                     b.Property<Guid?>("InvoiceId")
                         .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
 
                     b.Property<DateTime>("IssuedAt")
                         .HasColumnType("timestamp with time zone");
@@ -2046,6 +2088,12 @@ namespace ClinicManagementSystem.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -2548,6 +2596,11 @@ namespace ClinicManagementSystem.Infrastructure.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<int>("FailedLoginAttempts")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -2569,6 +2622,9 @@ namespace ClinicManagementSystem.Infrastructure.Migrations
                     b.Property<string>("LastUpdatedBy")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("LockoutEndUtc")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()

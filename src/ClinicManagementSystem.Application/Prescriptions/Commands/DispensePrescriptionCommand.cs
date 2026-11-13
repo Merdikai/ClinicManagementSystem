@@ -4,6 +4,7 @@ using ClinicManagementSystem.Application.Interfaces;
 using ClinicManagementSystem.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid;
 
 namespace ClinicManagementSystem.Application.Prescriptions.Commands;
 
@@ -13,13 +14,21 @@ public record DispensePrescriptionCommand(
     string? VerificationNotes = null
 ) : IRequest<Result<DispenseResponseDto>>;
 
+#pragma warning disable EXTEXP0018
 public class DispensePrescriptionCommandHandler : IRequestHandler<DispensePrescriptionCommand, Result<DispenseResponseDto>>
 {
     private readonly IClinicDbContext _context;
+    private readonly ICurrentUserService? _currentUserService;
+    private readonly HybridCache? _cache;
 
-    public DispensePrescriptionCommandHandler(IClinicDbContext context)
+    public DispensePrescriptionCommandHandler(
+        IClinicDbContext context,
+        ICurrentUserService? currentUserService = null,
+        HybridCache? cache = null)
     {
         _context = context;
+        _currentUserService = currentUserService;
+        _cache = cache;
     }
 
     public async Task<Result<DispenseResponseDto>> Handle(DispensePrescriptionCommand request, CancellationToken cancellationToken)
@@ -40,21 +49,8 @@ public class DispensePrescriptionCommandHandler : IRequestHandler<DispensePrescr
         if (prescription.Status == "Dispensed")
             return Result<DispenseResponseDto>.Failure("Prescription has already been dispensed.", "already_dispensed");
 
-        // Resolve pharmacist name
-        string pharmacistName = "Dispensary Pharmacist";
-        if (request.PharmacistUserId.HasValue && request.PharmacistUserId.Value != Guid.Empty)
-        {
-            var user = await _context.Users.FindAsync(new object[] { request.PharmacistUserId.Value }, cancellationToken);
-            if (user != null)
-            {
-                pharmacistName = $"{user.FirstName} {user.LastName}".Trim();
-            }
-        }
+        var resolvedPharmacistId = request.PharmacistUserId ?? _currentUserService?.UserId;
 
-        string patientName = prescription.Consultation?.Appointment?.Patient != null
-            ? $"{prescription.Consultation.Appointment.Patient.FirstName} {prescription.Consultation.Appointment.Patient.LastName}"
-            : "Unknown Patient";
-        string patientMrn = prescription.Consultation?.Appointment?.Patient?.MedicalRecordNumber ?? "UNKNOWN";
         string doctorName = prescription.Consultation?.Doctor != null
             ? $"Dr. {prescription.Consultation.Doctor.FirstName} {prescription.Consultation.Doctor.LastName}"
             : "Attending Physician";
@@ -65,7 +61,7 @@ public class DispensePrescriptionCommandHandler : IRequestHandler<DispensePrescr
 
         foreach (var item in prescription.PrescriptionItems)
         {
-            var medicine = item.Medicine ?? await _context.Medicines.FindAsync(new object[] { item.MedicineId }, cancellationToken);
+            var medicine = item.Medicine ?? await _context.Medicines.FindAsync([item.MedicineId], cancellationToken);
             if (medicine is null) continue;
 
             var dispensedQuantity = Math.Min(item.Quantity, medicine.StockQuantity);
@@ -83,34 +79,33 @@ public class DispensePrescriptionCommandHandler : IRequestHandler<DispensePrescr
             var itemTotal = dispensedQuantity * item.UnitPrice;
             totalCost += itemTotal;
 
-            // Regulatory Controlled Substance Log
+            // Regulatory Controlled Substance Log (must use verified dispensing pharmacist identity)
             if (medicine.IsControlledSubstance && dispensedQuantity > 0)
             {
-                var patientId = prescription.Consultation?.Appointment?.PatientId ?? Guid.Empty;
-                var pharmaId = request.PharmacistUserId ?? Guid.Empty;
-                if (pharmaId == Guid.Empty)
+                if (!resolvedPharmacistId.HasValue || resolvedPharmacistId.Value == Guid.Empty)
                 {
-                    var fallbackUser = _context.Users.FirstOrDefault(u => u.Username == "pharmacist.sam");
-                    if (fallbackUser != null) pharmaId = fallbackUser.Id;
+                    return Result<DispenseResponseDto>.Failure(
+                        "Authenticated dispensing pharmacist identity is required to log controlled substances.",
+                        "controlled_substance_pharmacist_required");
                 }
 
+                var patientId = prescription.Consultation?.Appointment?.PatientId ?? Guid.Empty;
                 var auditLog = new ControlledSubstanceLog
                 {
                     Id = Guid.NewGuid(),
-                    LogNumber = $"CSL-{DateTime.UtcNow:yyyyMMdd}-{new Random().Next(1000, 9999)}",
+                    LogNumber = $"CSL-{DateTime.UtcNow:yyyyMMdd}-{Random.Shared.Next(1000, 9999)}",
                     MedicineId = medicine.Id,
                     PrescriptionId = prescription.Id,
                     PatientId = patientId,
                     QuantityDispensed = dispensedQuantity,
                     RemainingBalance = medicine.StockQuantity,
                     PrescribingDoctorName = doctorName,
-                    DispensingPharmacistUserId = pharmaId,
+                    DispensingPharmacistUserId = resolvedPharmacistId.Value,
                     DispensedAt = DateTime.UtcNow,
                     MedicalJustification = request.VerificationNotes ?? "Controlled substance double-verified and dispensed under physician order."
                 };
                 _context.ControlledSubstanceLogs.Add(auditLog);
             }
-
 
             dispensedItems.Add(new DispensedItemDto(
                 medicine.Name,
@@ -124,10 +119,15 @@ public class DispensePrescriptionCommandHandler : IRequestHandler<DispensePrescr
 
         prescription.Status = fullyDispensed ? "Dispensed" : "PartiallyDispensed";
         prescription.DispensedAt = DateTime.UtcNow;
-        prescription.DispensedByUserId = request.PharmacistUserId;
+        prescription.DispensedByUserId = resolvedPharmacistId;
         prescription.VerificationNotes = request.VerificationNotes;
 
         await _context.SaveChangesAsync(cancellationToken);
+
+        if (_cache is not null)
+        {
+            try { await _cache.RemoveByTagAsync("medicines", cancellationToken); } catch { }
+        }
 
         return Result<DispenseResponseDto>.Success(new DispenseResponseDto(
             prescription.Id,
@@ -139,3 +139,4 @@ public class DispensePrescriptionCommandHandler : IRequestHandler<DispensePrescr
         ));
     }
 }
+#pragma warning restore EXTEXP0018

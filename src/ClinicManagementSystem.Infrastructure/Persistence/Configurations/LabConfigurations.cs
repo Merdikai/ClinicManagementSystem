@@ -1,4 +1,4 @@
-﻿using ClinicManagementSystem.Domain.Entities;
+using ClinicManagementSystem.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -39,6 +39,8 @@ public class LabOrderConfiguration : IEntityTypeConfiguration<LabOrder>
             .WithOne(i => i.LabOrder)
             .HasForeignKey(i => i.LabOrderId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasQueryFilter(e => !e.Patient.IsDeleted);
     }
 }
 
@@ -58,6 +60,8 @@ public class LabOrderItemConfiguration : IEntityTypeConfiguration<LabOrderItem>
             .WithOne(r => r.LabOrderItem)
             .HasForeignKey<LabResult>(r => r.LabOrderItemId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasQueryFilter(e => !e.LabOrder.Patient.IsDeleted);
     }
 }
 
@@ -66,5 +70,6 @@ public class LabResultConfiguration : IEntityTypeConfiguration<LabResult>
     public void Configure(EntityTypeBuilder<LabResult> builder)
     {
         builder.HasKey(e => e.Id);
+        builder.HasQueryFilter(e => !e.LabOrderItem.LabOrder.Patient.IsDeleted);
     }
 }

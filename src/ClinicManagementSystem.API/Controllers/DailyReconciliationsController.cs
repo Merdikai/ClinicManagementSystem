@@ -20,7 +20,7 @@ namespace ClinicManagementSystem.API.Controllers;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/daily-reconciliations")]
 [Tags("Daily Cash Reconciliation")]
-[Authorize]
+[Authorize(Roles = "Receptionist,Accountant,Admin")]
 public class DailyReconciliationsController : ControllerBase
 {
     private readonly ISender _sender;
@@ -84,6 +84,7 @@ public class DailyReconciliationsController : ControllerBase
     }
 
     [HttpPatch("{id:guid}/audit")]
+    [Authorize(Roles = "Accountant,Admin")]
     [EndpointSummary("Audit and verify front-desk receptionist daily cash drawer closing")]
     [ProducesResponseType(typeof(DailyCashReconciliationResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
@@ -117,14 +118,10 @@ public class DailyReconciliationsController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(emailClaim))
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == emailClaim);
+            var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Email == emailClaim);
             if (user != null) return user.Id;
         }
 
-        var receptionistUser = await _context.Users.FirstOrDefaultAsync(u => u.Email.Contains("receptionist"));
-        if (receptionistUser != null) return receptionistUser.Id;
-
-        var anyUser = await _context.Users.FirstOrDefaultAsync();
-        return anyUser?.Id ?? Guid.NewGuid();
+        throw new UnauthorizedAccessException("Authenticated user identity could not be resolved.");
     }
 }

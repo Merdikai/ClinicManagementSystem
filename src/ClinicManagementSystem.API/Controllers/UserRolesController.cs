@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using ClinicManagementSystem.API.Filters;
 using ClinicManagementSystem.Application.DTOs;
 using ClinicManagementSystem.Application.UserRoles.Commands;
 using ClinicManagementSystem.Application.UserRoles.Queries;
@@ -29,20 +30,22 @@ public class UserRolesController : ControllerBase
     // ─────────────────────────────────────────────────────────────────────────
 
     [HttpGet("with-roles")]
+    [Authorize(Roles = "Admin,Doctor,Nurse,Receptionist,Pharmacist,LabTechnician,Radiologist,Accountant")]
     [EndpointSummary("Get all users with their assigned roles and profile status")]
     [ProducesResponseType(typeof(IEnumerable<UserWithRolesDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAllUsersWithRoles()
+    public async Task<IActionResult> GetAllUsersWithRoles(CancellationToken ct)
     {
-        var result = await _sender.Send(new GetAllUsersWithRolesQuery());
+        var result = await _sender.Send(new GetAllUsersWithRolesQuery(), ct);
         return Ok(result.Value);
     }
 
     [HttpGet("{userId:guid}/roles")]
+    [Authorize(Roles = "Admin")]
     [EndpointSummary("Get roles for a specific user")]
     [ProducesResponseType(typeof(UserWithRolesDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetUserRoles(Guid userId)
+    public async Task<IActionResult> GetUserRoles(Guid userId, CancellationToken ct)
     {
-        var result = await _sender.Send(new GetUserRolesQuery(userId));
+        var result = await _sender.Send(new GetUserRolesQuery(userId), ct);
         return Ok(result.Value);
     }
 
@@ -52,6 +55,7 @@ public class UserRolesController : ControllerBase
 
     [HttpPost]
     [Authorize(Roles = "Admin")]
+    [AuditAction("User", "Created")]
     [EndpointSummary("Admin: atomically provision a new staff account with an assigned role")]
     [ProducesResponseType(typeof(object), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
@@ -84,6 +88,7 @@ public class UserRolesController : ControllerBase
 
     [HttpPost("{userId:guid}/roles")]
     [Authorize(Roles = "Admin")]
+    [AuditAction("UserRole", "Assigned")]
     [EndpointSummary("Assign a role to a user")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -110,6 +115,7 @@ public class UserRolesController : ControllerBase
 
     [HttpDelete("{userId:guid}/roles/{roleName}")]
     [Authorize(Roles = "Admin")]
+    [AuditAction("UserRole", "Removed")]
     [EndpointSummary("Remove a role from a user")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -129,6 +135,7 @@ public class UserRolesController : ControllerBase
 
     [HttpPost("{userId:guid}/reset-password")]
     [Authorize(Roles = "Admin")]
+    [AuditAction("User", "PasswordReset")]
     [EndpointSummary("Admin: reset a staff member's password directly (bypass email flow)")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
@@ -157,6 +164,7 @@ public class UserRolesController : ControllerBase
 
     [HttpPost("{userId:guid}/toggle-status")]
     [Authorize(Roles = "Admin")]
+    [AuditAction("User", "StatusToggled")]
     [EndpointSummary("Toggle user active/inactive status")]
     [ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]

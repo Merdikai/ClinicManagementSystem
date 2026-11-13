@@ -4,7 +4,7 @@ namespace ClinicManagementSystem.Domain.Interfaces;
 
 public interface IVitalSignRepository
 {
-    Task<VitalSign?> GetByAppointmentIdAsync(Guid appointmentId);
-    Task AddAsync(VitalSign vitalSign);
-    Task SaveChangesAsync();
+    Task<VitalSign?> GetByAppointmentIdAsync(Guid appointmentId, CancellationToken ct = default);
+    Task AddAsync(VitalSign vitalSign, CancellationToken ct = default);
+    Task SaveChangesAsync(CancellationToken ct = default);
 }

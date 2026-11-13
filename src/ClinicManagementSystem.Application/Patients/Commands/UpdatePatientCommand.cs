@@ -65,7 +65,7 @@ public class UpdatePatientCommandHandler : IRequestHandler<UpdatePatientCommand,
         try
         {
             await _cache.RemoveByTagAsync("patients", cancellationToken);
-            await _cache.RemoveAsync($"patient_{request.Id}", cancellationToken);
+            await _cache.RemoveAsync($"patient_v1:{request.Id}", cancellationToken);
         }
         catch { }
 

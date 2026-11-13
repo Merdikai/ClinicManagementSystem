@@ -37,5 +37,8 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.Property(u => u.PhoneNumber)
             .HasMaxLength(20);
+
+        builder.Property(u => u.FailedLoginAttempts)
+            .HasDefaultValue(0);
     }
 }

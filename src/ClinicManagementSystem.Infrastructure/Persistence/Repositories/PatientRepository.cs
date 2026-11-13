@@ -14,18 +14,18 @@ public class PatientRepository : IPatientRepository
         _context = context;
     }
 
-    public async Task<Patient?> GetByIdAsync(Guid id)
-        => await _context.Patients.FindAsync(id);
+    public async Task<Patient?> GetByIdAsync(Guid id, CancellationToken ct = default)
+        => await _context.Patients.FindAsync([id], ct).ConfigureAwait(false);
 
-    public async Task<Patient?> GetByMedicalRecordNumberAsync(string mrn)
-        => await _context.Patients.FirstOrDefaultAsync(p => p.MedicalRecordNumber == mrn);
+    public async Task<Patient?> GetByMedicalRecordNumberAsync(string mrn, CancellationToken ct = default)
+        => await _context.Patients.AsNoTracking().FirstOrDefaultAsync(p => p.MedicalRecordNumber == mrn, ct).ConfigureAwait(false);
 
-    public async Task<IEnumerable<Patient>> GetAllAsync()
-        => await _context.Patients.OrderBy(p => p.LastName).ToListAsync();
+    public async Task<IEnumerable<Patient>> GetAllAsync(CancellationToken ct = default)
+        => await _context.Patients.AsNoTracking().OrderBy(p => p.LastName).ToListAsync(ct).ConfigureAwait(false);
 
-    public async Task<(IEnumerable<Patient> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, string? search, string? sortBy, bool descending)
+    public async Task<(IEnumerable<Patient> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, string? search, string? sortBy, bool descending, CancellationToken ct = default)
     {
-        var query = _context.Patients.AsQueryable();
+        var query = _context.Patients.AsNoTracking().AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -35,7 +35,7 @@ public class PatientRepository : IPatientRepository
                 EF.Functions.ILike(p.MedicalRecordNumber, $"%{search}%"));
         }
 
-        var totalCount = await query.CountAsync();
+        var totalCount = await query.CountAsync(ct).ConfigureAwait(false);
 
         query = sortBy?.ToLower() switch
         {
@@ -49,17 +49,18 @@ public class PatientRepository : IPatientRepository
         var items = await query
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .ToListAsync();
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
 
         return (items, totalCount);
     }
 
-    public async Task AddAsync(Patient patient)
-        => await _context.Patients.AddAsync(patient);
+    public async Task AddAsync(Patient patient, CancellationToken ct = default)
+        => await _context.Patients.AddAsync(patient, ct).ConfigureAwait(false);
 
     public void Update(Patient patient)
         => _context.Patients.Update(patient);
 
-    public async Task SaveChangesAsync()
-        => await _context.SaveChangesAsync();
+    public async Task SaveChangesAsync(CancellationToken ct = default)
+        => await _context.SaveChangesAsync(ct).ConfigureAwait(false);
 }

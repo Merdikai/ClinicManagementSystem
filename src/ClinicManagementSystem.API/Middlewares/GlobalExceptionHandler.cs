@@ -2,14 +2,15 @@ using ClinicManagementSystem.Application.Exceptions;
 using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace ClinicManagementSystem.API.Middlewares;
 
 public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
 {
     public async ValueTask<bool> TryHandleAsync(
-        HttpContext ctx, 
-        Exception ex, 
+        HttpContext ctx,
+        Exception ex,
         CancellationToken ct)
     {
         logger.LogError(ex, "Unhandled exception: {Message}. TraceIdentifier: {TraceId}", ex.Message, ctx.TraceIdentifier);
@@ -41,10 +42,30 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
                 "Forbidden",
                 unauthorized.Message
             ),
+            DbUpdateConcurrencyException => (
+                StatusCodes.Status409Conflict,
+                "Concurrency Conflict",
+                "The record was modified by another user. Please refresh and try again."
+            ),
             ConflictException conflict => (
                 StatusCodes.Status409Conflict,
                 "Conflict",
                 conflict.Message
+            ),
+            BusinessRuleViolationException { ErrorCode: "invalid_credentials" or "invalid_refresh_token" } bizAuth => (
+                StatusCodes.Status401Unauthorized,
+                "Unauthorized",
+                bizAuth.Message
+            ),
+            BusinessRuleViolationException { ErrorCode: "account_locked" } bizLocked => (
+                StatusCodes.Status423Locked,
+                "Account Locked",
+                bizLocked.Message
+            ),
+            BusinessRuleViolationException { ErrorCode: "account_deactivated" } bizDisabled => (
+                StatusCodes.Status403Forbidden,
+                "Account Deactivated",
+                bizDisabled.Message
             ),
             BusinessRuleViolationException bizEx => (
                 StatusCodes.Status409Conflict,
@@ -83,4 +104,3 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
         return true;
     }
 }
-

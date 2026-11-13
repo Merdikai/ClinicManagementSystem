@@ -4,9 +4,9 @@ namespace ClinicManagementSystem.Domain.Interfaces;
 
 public interface IInvoiceRepository
 {
-    Task<Invoice?> GetByIdAsync(Guid id);
-    Task<IEnumerable<Invoice>> GetByPatientIdAsync(Guid patientId);
-    Task AddAsync(Invoice invoice);
+    Task<Invoice?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<IEnumerable<Invoice>> GetByPatientIdAsync(Guid patientId, CancellationToken ct = default);
+    Task AddAsync(Invoice invoice, CancellationToken ct = default);
     void Update(Invoice invoice);
-    Task SaveChangesAsync();
+    Task SaveChangesAsync(CancellationToken ct = default);
 }

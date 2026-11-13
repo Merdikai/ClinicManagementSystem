@@ -39,5 +39,7 @@ public class BillingAdjustmentConfiguration : IEntityTypeConfiguration<BillingAd
             .WithMany()
             .HasForeignKey(a => a.InvoiceId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasQueryFilter(a => !a.Invoice.IsDeleted && !a.Invoice.Patient.IsDeleted);
     }
 }

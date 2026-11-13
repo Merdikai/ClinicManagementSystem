@@ -31,6 +31,6 @@ public class ConsultationConfiguration : IEntityTypeConfiguration<Consultation>
         builder.Property(c => c.Diagnosis)
             .HasMaxLength(1000);
 
-        builder.HasQueryFilter(c => !c.Appointment.IsDeleted);
+        builder.HasQueryFilter(c => !c.Appointment.IsDeleted && !c.Appointment.Patient.IsDeleted);
     }
 }

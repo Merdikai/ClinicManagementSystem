@@ -9,4 +9,10 @@ public class BusinessRuleViolationException : Exception
     {
         ErrorCode = errorCode;
     }
+
+    public BusinessRuleViolationException(string message, Exception innerException, string errorCode = "business_rule_violation")
+        : base(message, innerException)
+    {
+        ErrorCode = errorCode;
+    }
 }

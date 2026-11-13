@@ -1,14 +1,13 @@
 using AutoMapper;
 using ClinicManagementSystem.Application.DTOs;
 using ClinicManagementSystem.Application.Exceptions;
+using ClinicManagementSystem.Application.Interfaces;
 using ClinicManagementSystem.Domain.Entities;
 using ClinicManagementSystem.Domain.Interfaces;
 using MediatR;
 using Microsoft.Extensions.Caching.Hybrid;
 
 namespace ClinicManagementSystem.Application.Patients.Queries;
-
-using ClinicManagementSystem.Application.Interfaces;
 
 #pragma warning disable EXTEXP0018
 public class GetPatientByIdQueryHandler : IRequestHandler<GetPatientByIdQuery, PatientResponseDto>
@@ -18,7 +17,11 @@ public class GetPatientByIdQueryHandler : IRequestHandler<GetPatientByIdQuery, P
     private readonly HybridCache _cache;
     private readonly ILinkGeneratorService _linkGenerator;
 
-    public GetPatientByIdQueryHandler(IPatientRepository patientRepository, IMapper mapper, HybridCache cache, ILinkGeneratorService linkGenerator)
+    public GetPatientByIdQueryHandler(
+        IPatientRepository patientRepository,
+        IMapper mapper,
+        HybridCache cache,
+        ILinkGeneratorService linkGenerator)
     {
         _patientRepository = patientRepository;
         _mapper = mapper;
@@ -29,15 +32,17 @@ public class GetPatientByIdQueryHandler : IRequestHandler<GetPatientByIdQuery, P
     public async Task<PatientResponseDto> Handle(GetPatientByIdQuery request, CancellationToken cancellationToken)
     {
         var cacheKey = $"patient_v1:{request.Id}";
+        var state = (_patientRepository, _mapper, _linkGenerator, request.Id);
 
         return await _cache.GetOrCreateAsync(
             cacheKey,
-            async ct =>
+            state,
+            static async (s, ct) =>
             {
-                var patient = await _patientRepository.GetByIdAsync(request.Id)
-                    ?? throw new NotFoundException(nameof(Patient), request.Id);
-                var dto = _mapper.Map<PatientResponseDto>(patient);
-                dto.Links = _linkGenerator.GeneratePatientLinks(patient.Id);
+                var patient = await s._patientRepository.GetByIdAsync(s.Id, ct)
+                    ?? throw new NotFoundException(nameof(Patient), s.Id);
+                var dto = s._mapper.Map<PatientResponseDto>(patient);
+                dto.Links = s._linkGenerator.GeneratePatientLinks(patient.Id);
                 return dto;
             },
             options: new HybridCacheEntryOptions

@@ -19,5 +19,7 @@ public class MedicalRecordConfiguration : IEntityTypeConfiguration<MedicalRecord
             .WithOne(a => a.MedicalRecord)
             .HasForeignKey<MedicalRecord>(mr => mr.AppointmentId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasQueryFilter(mr => !mr.Patient.IsDeleted);
     }
 }

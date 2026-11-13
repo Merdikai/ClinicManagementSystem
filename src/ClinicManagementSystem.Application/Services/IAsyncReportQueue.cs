@@ -5,7 +5,8 @@ public record AsyncReportJob(
     string ReportType,
     string RequestedBy,
     DateTime QueuedAt,
-    string ParametersJson
+    string ParametersJson,
+    string? RequestedByUserId = null
 );
 
 public record AsyncReportStatus(
@@ -18,11 +19,18 @@ public record AsyncReportStatus(
     string? ErrorMessage = null
 );
 
+public record AsyncReportArtifact(
+    byte[] Content,
+    string ContentType,
+    string FileName
+);
+
 public interface IAsyncReportQueue
 {
     ValueTask EnqueueAsync(AsyncReportJob job, CancellationToken cancellationToken = default);
     IAsyncEnumerable<AsyncReportJob> ReadAllAsync(CancellationToken cancellationToken = default);
     void UpdateStatus(string jobId, string status, string? downloadUrl = null, string? error = null);
     AsyncReportStatus? GetStatus(string jobId);
+    void SaveArtifact(string jobId, byte[] content, string contentType, string fileName);
+    AsyncReportArtifact? GetArtifact(string jobId);
 }
-

@@ -4,6 +4,7 @@ using ClinicManagementSystem.Application.DTOs;
 using ClinicManagementSystem.Domain.Enums;
 using ClinicManagementSystem.Domain.Interfaces;
 using MediatR;
+using Microsoft.Extensions.Caching.Hybrid;
 
 namespace ClinicManagementSystem.Application.Appointments.Commands;
 
@@ -11,16 +12,21 @@ public class UpdateAppointmentStatusCommandHandler : IRequestHandler<UpdateAppoi
 {
     private readonly IAppointmentRepository _appointmentRepository;
     private readonly IMapper _mapper;
+    private readonly HybridCache? _cache;
 
-    public UpdateAppointmentStatusCommandHandler(IAppointmentRepository appointmentRepository, IMapper mapper)
+    public UpdateAppointmentStatusCommandHandler(
+        IAppointmentRepository appointmentRepository,
+        IMapper mapper,
+        HybridCache? cache = null)
     {
         _appointmentRepository = appointmentRepository;
         _mapper = mapper;
+        _cache = cache;
     }
 
     public async Task<Result<AppointmentResponseDto>> Handle(UpdateAppointmentStatusCommand request, CancellationToken cancellationToken)
     {
-        var appointment = await _appointmentRepository.GetByIdAsync(request.AppointmentId);
+        var appointment = await _appointmentRepository.GetByIdAsync(request.AppointmentId, cancellationToken);
         if (appointment is null)
             return Result<AppointmentResponseDto>.Failure($"Appointment {request.AppointmentId} not found", "appointment_not_found");
 
@@ -33,7 +39,17 @@ public class UpdateAppointmentStatusCommandHandler : IRequestHandler<UpdateAppoi
             appointment.RoomAssignment = request.RoomAssignment;
 
         _appointmentRepository.Update(appointment);
-        await _appointmentRepository.SaveChangesAsync();
+        await _appointmentRepository.SaveChangesAsync(cancellationToken);
+
+        if (_cache is not null)
+        {
+            try
+            {
+                await _cache.RemoveByTagAsync("appointments", cancellationToken);
+                await _cache.RemoveAsync($"appointment_v1:{request.AppointmentId}", cancellationToken);
+            }
+            catch { }
+        }
 
         return Result<AppointmentResponseDto>.Success(_mapper.Map<AppointmentResponseDto>(appointment));
     }

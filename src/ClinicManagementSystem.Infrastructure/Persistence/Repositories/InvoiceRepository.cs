@@ -14,28 +14,33 @@ public class InvoiceRepository : IInvoiceRepository
         _context = context;
     }
 
-    public async Task<Invoice?> GetByIdAsync(Guid id)
+    public async Task<Invoice?> GetByIdAsync(Guid id, CancellationToken ct = default)
         => await _context.Invoices
             .Include(i => i.LineItems)
             .Include(i => i.Payments)
             .Include(i => i.Patient)
-            .FirstOrDefaultAsync(i => i.Id == id);
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(i => i.Id == id, ct)
+            .ConfigureAwait(false);
 
-    public async Task<IEnumerable<Invoice>> GetByPatientIdAsync(Guid patientId)
+    public async Task<IEnumerable<Invoice>> GetByPatientIdAsync(Guid patientId, CancellationToken ct = default)
         => await _context.Invoices
+            .AsNoTracking()
             .Where(i => i.PatientId == patientId)
             .Include(i => i.LineItems)
             .Include(i => i.Payments)
             .Include(i => i.Patient)
+            .AsSplitQuery()
             .OrderByDescending(i => i.IssueDate)
-            .ToListAsync();
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
 
-    public async Task AddAsync(Invoice invoice)
-        => await _context.Invoices.AddAsync(invoice);
+    public async Task AddAsync(Invoice invoice, CancellationToken ct = default)
+        => await _context.Invoices.AddAsync(invoice, ct).ConfigureAwait(false);
 
     public void Update(Invoice invoice)
         => _context.Invoices.Update(invoice);
 
-    public async Task SaveChangesAsync()
-        => await _context.SaveChangesAsync();
+    public async Task SaveChangesAsync(CancellationToken ct = default)
+        => await _context.SaveChangesAsync(ct).ConfigureAwait(false);
 }

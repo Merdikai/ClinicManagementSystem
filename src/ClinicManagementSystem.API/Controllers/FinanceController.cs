@@ -19,7 +19,7 @@ namespace ClinicManagementSystem.API.Controllers;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/finance")]
 [Tags("Finance & Accounting")]
-[Authorize]
+[Authorize(Roles = "Accountant,Admin")]
 public class FinanceController : ControllerBase
 {
     private readonly ISender _sender;
@@ -250,15 +250,11 @@ public class FinanceController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(emailClaim))
         {
-            var u = await _context.Users.FirstOrDefaultAsync(user => user.Email == emailClaim);
+            var u = await _context.Users.AsNoTracking().FirstOrDefaultAsync(user => user.Email == emailClaim);
             if (u != null) return (u.Id, $"{u.FirstName} {u.LastName}".Trim());
         }
 
-        var accountantUser = await _context.Users.FirstOrDefaultAsync(u => u.Email.Contains("accountant") || u.Username.Contains("accountant"));
-        if (accountantUser != null) return (accountantUser.Id, $"{accountantUser.FirstName} {accountantUser.LastName}".Trim());
-
-        var firstUser = await _context.Users.FirstOrDefaultAsync();
-        return (firstUser?.Id ?? Guid.NewGuid(), firstUser != null ? $"{firstUser.FirstName} {firstUser.LastName}".Trim() : "Accountant Dave");
+        throw new UnauthorizedAccessException("Authenticated user identity could not be resolved.");
     }
 
     private async Task<string> ResolveUserNameAsync()

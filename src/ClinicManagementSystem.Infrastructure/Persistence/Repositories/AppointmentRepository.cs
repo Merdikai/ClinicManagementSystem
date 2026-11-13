@@ -15,7 +15,7 @@ public class AppointmentRepository : IAppointmentRepository
         _context = context;
     }
 
-    public async Task<Appointment?> GetByIdAsync(Guid id)
+    public async Task<Appointment?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
         return await _context.Appointments
             .Include(a => a.Patient)
@@ -24,32 +24,39 @@ public class AppointmentRepository : IAppointmentRepository
             .Include(a => a.Consultation)
                 .ThenInclude(c => c!.Prescription)
                     .ThenInclude(p => p!.PrescriptionItems)
-            .FirstOrDefaultAsync(a => a.Id == id);
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(a => a.Id == id, ct)
+            .ConfigureAwait(false);
     }
 
-    public async Task<IEnumerable<Appointment>> GetByPatientIdAsync(Guid patientId)
+    public async Task<IEnumerable<Appointment>> GetByPatientIdAsync(Guid patientId, CancellationToken ct = default)
     {
         return await _context.Appointments
+            .AsNoTracking()
             .Include(a => a.Patient)
             .Include(a => a.Doctor)
             .Include(a => a.VitalSigns)
             .Include(a => a.Consultation)
                 .ThenInclude(c => c!.Prescription)
                     .ThenInclude(p => p!.PrescriptionItems)
+            .AsSplitQuery()
             .Where(a => a.PatientId == patientId)
             .OrderByDescending(a => a.ScheduledDateTime)
-            .ToListAsync();
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
     }
 
-    public async Task<IEnumerable<Appointment>> GetByDoctorIdAsync(Guid doctorId, DateTime? date)
+    public async Task<IEnumerable<Appointment>> GetByDoctorIdAsync(Guid doctorId, DateTime? date, CancellationToken ct = default)
     {
         var query = _context.Appointments
+            .AsNoTracking()
             .Include(a => a.Patient)
             .Include(a => a.Doctor)
             .Include(a => a.VitalSigns)
             .Include(a => a.Consultation)
                 .ThenInclude(c => c!.Prescription)
                     .ThenInclude(p => p!.PrescriptionItems)
+            .AsSplitQuery()
             .Where(a => a.DoctorId == doctorId);
 
         if (date.HasValue)
@@ -59,25 +66,27 @@ public class AppointmentRepository : IAppointmentRepository
             query = query.Where(a => a.ScheduledDateTime >= start && a.ScheduledDateTime < end);
         }
 
-        return await query.OrderBy(a => a.ScheduledDateTime).ToListAsync();
+        return await query.OrderBy(a => a.ScheduledDateTime).ToListAsync(ct).ConfigureAwait(false);
     }
 
     public async Task<(IEnumerable<Appointment> Items, int TotalCount)> GetPagedAsync(
-        int page, 
-        int pageSize, 
-        DateTime? startDate, 
-        DateTime? endDate, 
-        Guid? patientId = null, 
-        AppointmentStatus? status = null)
+        int page,
+        int pageSize,
+        DateTime? startDate,
+        DateTime? endDate,
+        Guid? patientId = null,
+        AppointmentStatus? status = null,
+        CancellationToken ct = default)
     {
         var query = _context.Appointments
+            .AsNoTracking()
             .Include(a => a.Patient)
             .Include(a => a.Doctor)
             .Include(a => a.VitalSigns)
             .Include(a => a.Consultation)
                 .ThenInclude(c => c!.Prescription)
                     .ThenInclude(p => p!.PrescriptionItems)
-            .AsNoTracking();
+            .AsSplitQuery();
 
         if (startDate.HasValue)
             query = query.Where(a => a.ScheduledDateTime >= startDate.Value);
@@ -91,40 +100,38 @@ public class AppointmentRepository : IAppointmentRepository
         if (status.HasValue)
             query = query.Where(a => a.Status == status.Value);
 
-        var totalCount = await query.CountAsync();
+        var totalCount = await query.CountAsync(ct).ConfigureAwait(false);
         var items = await query
             .OrderByDescending(a => a.ScheduledDateTime)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .ToListAsync();
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
 
         return (items, totalCount);
     }
 
-    public async Task<bool> IsSlotAvailableAsync(Guid doctorId, DateTime dateTime, int durationMinutes)
+    public async Task<bool> IsSlotAvailableAsync(Guid doctorId, DateTime dateTime, int durationMinutes, CancellationToken ct = default)
     {
         var end = dateTime.AddMinutes(durationMinutes);
-        return !await _context.Appointments.AnyAsync(a =>
+        return !await _context.Appointments.AsNoTracking().AnyAsync(a =>
             a.DoctorId == doctorId &&
             a.Status != AppointmentStatus.Cancelled &&
             a.Status != AppointmentStatus.Rejected &&
             a.ScheduledDateTime < end &&
-            a.ScheduledDateTime.AddMinutes(a.DurationMinutes) > dateTime);
+            a.ScheduledDateTime.AddMinutes(a.DurationMinutes) > dateTime, ct)
+            .ConfigureAwait(false);
     }
 
-    public async Task AddAsync(Appointment appointment)
-    {
-        await _context.Appointments.AddAsync(appointment);
-    }
+    public async Task AddAsync(Appointment appointment, CancellationToken ct = default)
+        => await _context.Appointments.AddAsync(appointment, ct).ConfigureAwait(false);
 
     public void Update(Appointment appointment)
-    {
-        _context.Appointments.Update(appointment);
-    }
+        => _context.Appointments.Update(appointment);
 
-    public async Task SoftDeleteAsync(Guid id)
+    public async Task SoftDeleteAsync(Guid id, CancellationToken ct = default)
     {
-        var appointment = await _context.Appointments.FindAsync(id);
+        var appointment = await _context.Appointments.FindAsync([id], ct).ConfigureAwait(false);
         if (appointment != null)
         {
             appointment.IsDeleted = true;
@@ -133,8 +140,6 @@ public class AppointmentRepository : IAppointmentRepository
         }
     }
 
-    public async Task SaveChangesAsync()
-    {
-        await _context.SaveChangesAsync();
-    }
+    public async Task SaveChangesAsync(CancellationToken ct = default)
+        => await _context.SaveChangesAsync(ct).ConfigureAwait(false);
 }

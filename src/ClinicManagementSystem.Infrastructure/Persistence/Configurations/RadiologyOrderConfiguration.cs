@@ -111,5 +111,7 @@ public class RadiologyOrderConfiguration : IEntityTypeConfiguration<RadiologyOrd
         builder.HasIndex(ro => ro.Modality);
         builder.HasIndex(ro => ro.OrderedAt);
         builder.HasIndex(ro => ro.IsCritical);
+
+        builder.HasQueryFilter(ro => !ro.Patient.IsDeleted);
     }
 }

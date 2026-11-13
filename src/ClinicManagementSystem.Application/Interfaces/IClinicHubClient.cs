@@ -10,4 +10,5 @@ public interface IClinicHubClient
     Task LabOrderUpdated(object payload);
     Task BreakGlassAlert(object payload);
     Task DutyRosterChanged(object payload);
+    Task ReportReady(object payload);
 }

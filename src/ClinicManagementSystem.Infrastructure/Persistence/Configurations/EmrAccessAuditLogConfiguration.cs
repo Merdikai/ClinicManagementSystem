@@ -22,5 +22,7 @@ public class EmrAccessAuditLogConfiguration : IEntityTypeConfiguration<EmrAccess
         builder.HasIndex(l => l.PatientId);
         builder.HasIndex(l => l.UserId);
         builder.HasIndex(l => l.Timestamp);
+
+        builder.HasQueryFilter(l => !l.Patient.IsDeleted);
     }
 }

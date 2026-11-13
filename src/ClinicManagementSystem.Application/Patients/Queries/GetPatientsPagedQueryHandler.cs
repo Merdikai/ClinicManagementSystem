@@ -2,11 +2,10 @@ using AutoMapper;
 using ClinicManagementSystem.Application.DTOs;
 using ClinicManagementSystem.Domain.Interfaces;
 using MediatR;
-
-namespace ClinicManagementSystem.Application.Patients.Queries;
-
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
+
+namespace ClinicManagementSystem.Application.Patients.Queries;
 
 #pragma warning disable EXTEXP0018
 public class GetPatientsPagedQueryHandler : IRequestHandler<GetPatientsPagedQuery, PagedResponse<PatientResponseDto>>
@@ -16,7 +15,11 @@ public class GetPatientsPagedQueryHandler : IRequestHandler<GetPatientsPagedQuer
     private readonly HybridCache _cache;
     private readonly ILogger<GetPatientsPagedQueryHandler> _logger;
 
-    public GetPatientsPagedQueryHandler(IPatientRepository patientRepository, IMapper mapper, HybridCache cache, ILogger<GetPatientsPagedQueryHandler> logger)
+    public GetPatientsPagedQueryHandler(
+        IPatientRepository patientRepository,
+        IMapper mapper,
+        HybridCache cache,
+        ILogger<GetPatientsPagedQueryHandler> logger)
     {
         _patientRepository = patientRepository;
         _mapper = mapper;
@@ -29,15 +32,15 @@ public class GetPatientsPagedQueryHandler : IRequestHandler<GetPatientsPagedQuer
         if (request.Page == 1 && request.PageSize <= 20 && string.IsNullOrEmpty(request.Search) && string.IsNullOrEmpty(request.SortBy))
         {
             var cacheKey = $"patients_v1:page{request.Page}:size{request.PageSize}";
-            var cacheHit = true;
+            var state = (_patientRepository, _mapper, _logger, cacheKey, request);
 
-            var cached = await _cache.GetOrCreateAsync(
+            return await _cache.GetOrCreateAsync(
                 cacheKey,
-                async ct =>
+                state,
+                static async (s, ct) =>
                 {
-                    cacheHit = false;
-                    _logger.LogInformation("Cache MISS for {CacheKey}", cacheKey);
-                    return await GetFromDatabaseAsync(request.Page, request.PageSize, request.Search, request.SortBy, request.Descending);
+                    s._logger.LogDebug("HybridCache miss for {CacheKey}; querying database.", s.cacheKey);
+                    return await FetchPagedAsync(s._patientRepository, s._mapper, s.request, ct);
                 },
                 options: new HybridCacheEntryOptions
                 {
@@ -46,27 +49,27 @@ public class GetPatientsPagedQueryHandler : IRequestHandler<GetPatientsPagedQuer
                 tags: ["patients"],
                 cancellationToken: cancellationToken
             );
-
-            if (cacheHit)
-                _logger.LogInformation("Cache HIT for {CacheKey}", cacheKey);
-
-            return cached;
         }
 
-        return await GetFromDatabaseAsync(request.Page, request.PageSize, request.Search, request.SortBy, request.Descending);
+        return await FetchPagedAsync(_patientRepository, _mapper, request, cancellationToken);
     }
 
-    private async Task<PagedResponse<PatientResponseDto>> GetFromDatabaseAsync(int page, int pageSize, string? search, string? sortBy, bool descending)
+    private static async Task<PagedResponse<PatientResponseDto>> FetchPagedAsync(
+        IPatientRepository repo,
+        IMapper mapper,
+        GetPatientsPagedQuery request,
+        CancellationToken ct)
     {
-        var (items, totalCount) = await _patientRepository.GetPagedAsync(page, pageSize, search, sortBy, descending);
-        var dtos = _mapper.Map<IEnumerable<PatientResponseDto>>(items);
-        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+        var (items, totalCount) = await repo.GetPagedAsync(
+            request.Page, request.PageSize, request.Search, request.SortBy, request.Descending, ct);
+        var dtos = mapper.Map<IEnumerable<PatientResponseDto>>(items);
+        var totalPages = (int)Math.Ceiling(totalCount / (double)request.PageSize);
 
         return new PagedResponse<PatientResponseDto>(
-            dtos, totalCount, page, pageSize,
+            dtos, totalCount, request.Page, request.PageSize,
             totalPages,
-            page < totalPages,
-            page > 1
+            request.Page < totalPages,
+            request.Page > 1
         );
     }
 }

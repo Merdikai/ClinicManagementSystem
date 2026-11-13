@@ -6,11 +6,25 @@ public static class DeprecationExtensions
     {
         app.Use(async (context, next) =>
         {
-            // Check if path contains "v1" and we want to deprecate it
-            if (context.Request.Path.StartsWithSegments("/api/v1"))
+            var path = context.Request.Path;
+
+            // Only flag v1 endpoints that have explicit v2 successor implementations
+            string? successorPath = path switch
             {
-                context.Response.Headers["Deprecation"] = "false";
-                context.Response.Headers["Sunset"] = "2027-12-31";
+                _ when path.StartsWithSegments("/api/v1/patients", StringComparison.OrdinalIgnoreCase)
+                    => path.Value!.Replace("/api/v1/patients", "/api/v2/patients", StringComparison.OrdinalIgnoreCase),
+                _ when path.StartsWithSegments("/api/v1/appointments", StringComparison.OrdinalIgnoreCase)
+                    => path.Value!.Replace("/api/v1/appointments", "/api/v2/appointments", StringComparison.OrdinalIgnoreCase),
+                _ when path.StartsWithSegments("/api/v1/reports", StringComparison.OrdinalIgnoreCase)
+                    => path.Value!.Replace("/api/v1/reports", "/api/v2/reports", StringComparison.OrdinalIgnoreCase),
+                _ => null
+            };
+
+            if (!string.IsNullOrEmpty(successorPath))
+            {
+                context.Response.Headers["Deprecation"] = "true";
+                context.Response.Headers["Sunset"] = "Fri, 31 Dec 2027 23:59:59 GMT";
+                context.Response.Headers.Append("Link", $"<{successorPath}>; rel=\"successor-version\"");
             }
 
             await next();

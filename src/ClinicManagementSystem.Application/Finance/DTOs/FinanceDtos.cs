@@ -26,7 +26,7 @@ public class DepartmentRevenueDto
     public string Department { get; set; } = string.Empty;
     public decimal Revenue { get; set; }
     public int InvoicesCount { get; set; }
-    public double Percentage { get; set; }
+    public decimal Percentage { get; set; }
 }
 
 public class MonthlyTrendDto

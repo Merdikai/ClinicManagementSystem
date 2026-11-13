@@ -1,17 +1,12 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Security.Claims;
-using System.Threading.Tasks;
 using Asp.Versioning;
-using AutoMapper;
+using ClinicManagementSystem.Application.Common;
 using ClinicManagementSystem.Application.DTOs;
 using ClinicManagementSystem.Application.Interfaces;
-using ClinicManagementSystem.Domain.Entities;
+using ClinicManagementSystem.Application.ShiftHandovers;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace ClinicManagementSystem.API.Controllers;
 
@@ -19,20 +14,15 @@ namespace ClinicManagementSystem.API.Controllers;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/shift-handovers")]
 [Tags("Shift Handovers (SBAR)")]
-[Authorize]
+[Authorize(Roles = "Nurse,Doctor,Admin")]
 public class ShiftHandoversController : ControllerBase
 {
-    private readonly IClinicDbContext _context;
-    private readonly IMapper _mapper;
+    private readonly ISender _sender;
     private readonly ICurrentUserService _currentUserService;
 
-    public ShiftHandoversController(
-        IClinicDbContext context,
-        IMapper mapper,
-        ICurrentUserService currentUserService)
+    public ShiftHandoversController(ISender sender, ICurrentUserService currentUserService)
     {
-        _context = context;
-        _mapper = mapper;
+        _sender = sender;
         _currentUserService = currentUserService;
     }
 
@@ -41,30 +31,10 @@ public class ShiftHandoversController : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<ShiftHandoverResponseDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(
         [FromQuery] DateTime? date = null,
-        [FromQuery] string? shiftType = null)
+        [FromQuery] string? shiftType = null,
+        CancellationToken ct = default)
     {
-        var query = _context.ShiftHandovers
-            .Include(s => s.NurseUser)
-            .AsNoTracking()
-            .AsQueryable();
-
-        if (date.HasValue)
-        {
-            var start = date.Value.Date;
-            var end = start.AddDays(1);
-            query = query.Where(s => s.HandoverTimestamp >= start && s.HandoverTimestamp < end);
-        }
-
-        if (!string.IsNullOrWhiteSpace(shiftType))
-        {
-            query = query.Where(s => s.ShiftType == shiftType);
-        }
-
-        var items = await query
-            .OrderByDescending(s => s.HandoverTimestamp)
-            .ToListAsync();
-
-        var dtos = _mapper.Map<IEnumerable<ShiftHandoverResponseDto>>(items);
+        var dtos = await _sender.Send(new GetShiftHandoversQuery(date, shiftType), ct);
         return Ok(dtos);
     }
 
@@ -72,20 +42,15 @@ public class ShiftHandoversController : ControllerBase
     [EndpointSummary("Get most recent shift handover")]
     [ProducesResponseType(typeof(ShiftHandoverResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<IActionResult> GetLatest()
+    public async Task<IActionResult> GetLatest(CancellationToken ct = default)
     {
-        var item = await _context.ShiftHandovers
-            .Include(s => s.NurseUser)
-            .AsNoTracking()
-            .OrderByDescending(s => s.HandoverTimestamp)
-            .FirstOrDefaultAsync();
-
+        var item = await _sender.Send(new GetLatestShiftHandoverQuery(), ct);
         if (item == null)
         {
             return NoContent();
         }
 
-        return Ok(_mapper.Map<ShiftHandoverResponseDto>(item));
+        return Ok(item);
     }
 
     [HttpPost]
@@ -93,7 +58,7 @@ public class ShiftHandoversController : ControllerBase
     [EndpointSummary("Create a new SBAR shift handover note")]
     [ProducesResponseType(typeof(ShiftHandoverResponseDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Create([FromBody] CreateShiftHandoverDto dto)
+    public async Task<IActionResult> Create([FromBody] CreateShiftHandoverDto dto, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(dto.ShiftType) || string.IsNullOrWhiteSpace(dto.Situation))
         {
@@ -104,40 +69,27 @@ public class ShiftHandoversController : ControllerBase
         if (authorId == Guid.Empty)
         {
             var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (Guid.TryParse(claim, out var parsedClaim))
+            if (!Guid.TryParse(claim, out var parsedClaim))
             {
-                authorId = parsedClaim;
+                return Unauthorized(new ProblemDetails { Title = "Unauthorized", Detail = "Authenticated nurse identity is required.", Status = 401 });
             }
-            else
-            {
-                var fallback = await _context.Users.FirstOrDefaultAsync();
-                if (fallback != null) authorId = fallback.Id;
-            }
+            authorId = parsedClaim;
         }
 
-        var handover = new ShiftHandover
-        {
-            Id = Guid.NewGuid(),
-            NurseUserId = authorId,
-            ShiftType = dto.ShiftType,
-            HandoverTimestamp = dto.HandoverTimestamp ?? DateTime.UtcNow,
-            Situation = dto.Situation,
-            Background = dto.Background ?? string.Empty,
-            Assessment = dto.Assessment ?? string.Empty,
-            Recommendation = dto.Recommendation ?? string.Empty,
-            ActivePatientCount = dto.ActivePatientCount,
-            CriticalAlertsCount = dto.CriticalAlertsCount
-        };
+        var result = await _sender.Send(new CreateShiftHandoverCommand(
+            authorId,
+            dto.ShiftType,
+            dto.HandoverTimestamp,
+            dto.Situation,
+            dto.Background,
+            dto.Assessment,
+            dto.Recommendation,
+            dto.ActivePatientCount,
+            dto.CriticalAlertsCount), ct);
 
-        _context.ShiftHandovers.Add(handover);
-        await _context.SaveChangesAsync();
-
-        var created = await _context.ShiftHandovers
-            .Include(s => s.NurseUser)
-            .AsNoTracking()
-            .FirstAsync(s => s.Id == handover.Id);
-
-        var resultDto = _mapper.Map<ShiftHandoverResponseDto>(created);
-        return CreatedAtAction(nameof(GetLatest), new { }, resultDto);
+        return result.Match<IActionResult>(
+            onSuccess: created => CreatedAtAction(nameof(GetLatest), new { }, created),
+            onFailure: (error, _) => BadRequest(new ProblemDetails { Title = "Handover Creation Failed", Detail = error, Status = 400 })
+        );
     }
 }

@@ -14,15 +14,17 @@ public class PrescriptionRepository : IPrescriptionRepository
         _context = context;
     }
 
-    public async Task<Prescription?> GetByIdAsync(Guid id)
+    public async Task<Prescription?> GetByIdAsync(Guid id, CancellationToken ct = default)
         => await _context.Prescriptions
             .Include(p => p.PrescriptionItems)
                 .ThenInclude(pi => pi.Medicine)
             .Include(p => p.Consultation)
                 .ThenInclude(c => c.Appointment)
                     .ThenInclude(a => a.Patient)
-            .FirstOrDefaultAsync(p => p.Id == id);
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(p => p.Id == id, ct)
+            .ConfigureAwait(false);
 
-    public async Task AddAsync(Prescription prescription)
-        => await _context.Prescriptions.AddAsync(prescription);
+    public async Task AddAsync(Prescription prescription, CancellationToken ct = default)
+        => await _context.Prescriptions.AddAsync(prescription, ct).ConfigureAwait(false);
 }

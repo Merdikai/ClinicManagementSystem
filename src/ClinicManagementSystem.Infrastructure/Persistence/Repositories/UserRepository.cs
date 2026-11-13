@@ -14,32 +14,41 @@ public class UserRepository : IUserRepository
         _context = context;
     }
 
-    public async Task<User?> GetByIdAsync(Guid id)
+    public async Task<User?> GetByIdAsync(Guid id, CancellationToken ct = default)
         => await _context.Users
             .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
-            .FirstOrDefaultAsync(u => u.Id == id);
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(u => u.Id == id, ct)
+            .ConfigureAwait(false);
 
-    public async Task<User?> GetByUsernameAsync(string username)
+    public async Task<User?> GetByUsernameAsync(string username, CancellationToken ct = default)
         => await _context.Users
             .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
-            .FirstOrDefaultAsync(u => u.Username == username);
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(u => u.Username == username, ct)
+            .ConfigureAwait(false);
 
-    public async Task<User?> GetByEmailAsync(string email)
+    public async Task<User?> GetByEmailAsync(string email, CancellationToken ct = default)
         => await _context.Users
             .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
-            .FirstOrDefaultAsync(u => u.Email == email);
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(u => u.Email == email, ct)
+            .ConfigureAwait(false);
 
-    public async Task<IEnumerable<User>> GetAllAsync()
+    public async Task<IEnumerable<User>> GetAllAsync(CancellationToken ct = default)
         => await _context.Users
+            .AsNoTracking()
             .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
-            .ToListAsync();
+            .AsSplitQuery()
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
 
-    public async Task AddAsync(User user)
-        => await _context.Users.AddAsync(user);
+    public async Task AddAsync(User user, CancellationToken ct = default)
+        => await _context.Users.AddAsync(user, ct).ConfigureAwait(false);
 
     public void Update(User user)
         => _context.Users.Update(user);
@@ -47,7 +56,6 @@ public class UserRepository : IUserRepository
     public void Delete(User user)
         => _context.Users.Remove(user);
 
-    // ✅ ADD THIS METHOD
-    public async Task SaveChangesAsync()
-        => await _context.SaveChangesAsync();
+    public async Task SaveChangesAsync(CancellationToken ct = default)
+        => await _context.SaveChangesAsync(ct).ConfigureAwait(false);
 }

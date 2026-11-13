@@ -1,6 +1,7 @@
-using ClinicManagementSystem.Application.Interfaces;   // ← IJwtTokenGenerator is here
+using ClinicManagementSystem.Application.Interfaces;
+using ClinicManagementSystem.Application.Options;
 using ClinicManagementSystem.Domain.Entities;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -10,21 +11,24 @@ namespace ClinicManagementSystem.Infrastructure.Identity;
 
 public class JwtTokenGenerator : IJwtTokenGenerator
 {
-    private readonly IConfiguration _configuration;
+    private readonly JwtOptions _jwtOptions;
 
-    public JwtTokenGenerator(IConfiguration configuration)
+    public JwtTokenGenerator(IOptions<JwtOptions> jwtOptions)
     {
-        _configuration = configuration;
+        _jwtOptions = jwtOptions.Value;
     }
 
     public string GenerateToken(User user, IList<string> roles)
     {
-        var key = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.Key));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
+        var now = DateTime.UtcNow;
         var claims = new List<Claim>
         {
+            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new(JwtRegisteredClaimNames.Iat, new DateTimeOffset(now).ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new(ClaimTypes.Name, user.Username),
             new(ClaimTypes.Email, user.Email),
@@ -39,11 +43,11 @@ public class JwtTokenGenerator : IJwtTokenGenerator
         }
 
         var token = new JwtSecurityToken(
-            issuer: _configuration["Jwt:Issuer"],
-            audience: _configuration["Jwt:Audience"],
+            issuer: _jwtOptions.Issuer,
+            audience: _jwtOptions.Audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(
-                double.Parse(_configuration["Jwt:ExpiryMinutes"]!)),
+            notBefore: now,
+            expires: now.AddMinutes(_jwtOptions.ExpiryMinutes),
             signingCredentials: credentials
         );
 

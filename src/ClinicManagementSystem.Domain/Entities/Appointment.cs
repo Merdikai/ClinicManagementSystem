@@ -12,7 +12,13 @@ public class Appointment
     public Guid DoctorId { get; set; }
     public User Doctor { get; set; } = null!;
     public DateTime ScheduledDateTime { get; set; }
-    public int DurationMinutes { get; set; } = 30;
+    public int DurationMinutes
+    {
+        get;
+        set => field = value <= 0
+            ? throw new ArgumentOutOfRangeException(nameof(DurationMinutes), "Appointment duration must be positive.")
+            : value;
+    } = 30;
     public AppointmentStatus Status { get; set; } = AppointmentStatus.Scheduled;
     public string ReasonForVisit { get; set; } = string.Empty;
     public string? TriageUrgency { get; set; } // "Emergency", "Urgent", "Routine"

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Asp.Versioning;
 using ClinicManagementSystem.API.Constants;
+using ClinicManagementSystem.API.Filters;
 using ClinicManagementSystem.Application.Laboratories.Commands;
 using ClinicManagementSystem.Application.Laboratories.DTOs;
 using ClinicManagementSystem.Application.Laboratories.Queries;
@@ -26,6 +27,7 @@ public class LabTestsController : ControllerBase
     }
 
     [HttpGet]
+    [ETagFilter]
     [EndpointSummary("Get all active lab test templates")]
     [ProducesResponseType(typeof(List<LabTestTemplateDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll([FromQuery] string? category = null)

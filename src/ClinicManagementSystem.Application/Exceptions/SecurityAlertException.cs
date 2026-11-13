@@ -9,5 +9,11 @@ public class SecurityAlertException : Exception
     {
         Code = code;
     }
+
+    public SecurityAlertException(string message, Exception innerException, string code = "security_alert")
+        : base(message, innerException)
+    {
+        Code = code;
+    }
 }
 

@@ -4,10 +4,10 @@ namespace ClinicManagementSystem.Domain.Interfaces;
 
 public interface IDoctorScheduleRepository
 {
-    Task<DoctorSchedule?> GetByIdAsync(Guid id);
-    Task<IEnumerable<DoctorSchedule>> GetAllAsync();
-    Task<IEnumerable<DoctorSchedule>> GetByDoctorIdAsync(Guid doctorId);
-    Task AddAsync(DoctorSchedule schedule);
+    Task<DoctorSchedule?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<IEnumerable<DoctorSchedule>> GetAllAsync(CancellationToken ct = default);
+    Task<IEnumerable<DoctorSchedule>> GetByDoctorIdAsync(Guid doctorId, CancellationToken ct = default);
+    Task AddAsync(DoctorSchedule schedule, CancellationToken ct = default);
     void Update(DoctorSchedule schedule);
     void Delete(DoctorSchedule schedule);
 }

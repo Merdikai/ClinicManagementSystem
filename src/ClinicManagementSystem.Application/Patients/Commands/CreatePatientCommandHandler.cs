@@ -5,20 +5,28 @@ using ClinicManagementSystem.Application.Interfaces;
 using ClinicManagementSystem.Domain.Entities;
 using ClinicManagementSystem.Domain.Interfaces;
 using MediatR;
+using Microsoft.Extensions.Caching.Hybrid;
 
 namespace ClinicManagementSystem.Application.Patients.Commands;
 
+#pragma warning disable EXTEXP0018
 public class CreatePatientCommandHandler : IRequestHandler<CreatePatientCommand, Result<PatientResponseDto>>
 {
     private readonly IPatientRepository _patientRepository;
     private readonly IMapper _mapper;
     private readonly ILinkGeneratorService _linkGenerator;
+    private readonly HybridCache? _cache;
 
-    public CreatePatientCommandHandler(IPatientRepository patientRepository, IMapper mapper, ILinkGeneratorService linkGenerator)
+    public CreatePatientCommandHandler(
+        IPatientRepository patientRepository,
+        IMapper mapper,
+        ILinkGeneratorService linkGenerator,
+        HybridCache? cache = null)
     {
         _patientRepository = patientRepository;
         _mapper = mapper;
         _linkGenerator = linkGenerator;
+        _cache = cache;
     }
 
     public async Task<Result<PatientResponseDto>> Handle(CreatePatientCommand request, CancellationToken cancellationToken)
@@ -31,8 +39,8 @@ public class CreatePatientCommandHandler : IRequestHandler<CreatePatientCommand,
             InsuranceProvider = request.InsuranceProvider,
             InsurancePolicyNumber = request.InsurancePolicyNumber,
             InsuranceCoveragePlan = request.InsuranceCoveragePlan,
-            InsuranceEligibilityStatus = !string.IsNullOrWhiteSpace(request.InsuranceEligibilityStatus) 
-                ? request.InsuranceEligibilityStatus 
+            InsuranceEligibilityStatus = !string.IsNullOrWhiteSpace(request.InsuranceEligibilityStatus)
+                ? request.InsuranceEligibilityStatus
                 : (!string.IsNullOrWhiteSpace(request.InsuranceProvider) ? "Active" : "Self-Pay")
         };
         var patient = _mapper.Map<Patient>(dto);
@@ -43,8 +51,18 @@ public class CreatePatientCommandHandler : IRequestHandler<CreatePatientCommand,
         patient.InsuranceCoveragePlan = dto.InsuranceCoveragePlan;
         patient.InsuranceEligibilityStatus = dto.InsuranceEligibilityStatus;
 
-        await _patientRepository.AddAsync(patient);
-        await _patientRepository.SaveChangesAsync();
+        await _patientRepository.AddAsync(patient, cancellationToken);
+        await _patientRepository.SaveChangesAsync(cancellationToken);
+
+        if (_cache is not null)
+        {
+            try
+            {
+                await _cache.RemoveByTagAsync("patients", cancellationToken);
+            }
+            catch { }
+        }
+
         var responseDto = _mapper.Map<PatientResponseDto>(patient);
         responseDto.Links = _linkGenerator.GeneratePatientLinks(patient.Id);
         return Result<PatientResponseDto>.Success(responseDto);
@@ -53,7 +71,8 @@ public class CreatePatientCommandHandler : IRequestHandler<CreatePatientCommand,
     private static string GenerateMRN()
     {
         var year = DateTime.UtcNow.Year;
-        var random = new Random().Next(10000, 99999);
+        var random = Random.Shared.Next(10000, 99999);
         return $"PAT-{year}-{random}";
     }
 }
+#pragma warning restore EXTEXP0018

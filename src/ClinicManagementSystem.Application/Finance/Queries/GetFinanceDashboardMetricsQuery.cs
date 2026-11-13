@@ -29,6 +29,7 @@ public class GetFinanceDashboardMetricsQueryHandler : IRequestHandler<GetFinance
 
         // 1. Total & Today Revenue from invoice payments
         var allPayments = await _context.Payments
+            .AsNoTracking()
             .Select(p => new { p.AmountPaid, p.PaymentDate, p.InvoiceId })
             .ToListAsync(cancellationToken);
 
@@ -37,58 +38,67 @@ public class GetFinanceDashboardMetricsQueryHandler : IRequestHandler<GetFinance
 
         // 2. Pending Receivables (Invoices not fully paid)
         var unpaidInvoices = await _context.Invoices
+            .AsNoTracking()
             .Include(i => i.Payments)
             .Where(i => i.Status != InvoiceStatus.Paid && i.Status != InvoiceStatus.Cancelled)
             .ToListAsync(cancellationToken);
 
-        var pendingReceivables = unpaidInvoices.Sum(i => Math.Max(0, i.TotalAmount - i.Payments.Sum(p => p.AmountPaid)));
+        var pendingReceivables = unpaidInvoices.Sum(i => Math.Max(0m, i.TotalAmount - i.Payments.Sum(p => p.AmountPaid)));
 
         // 3. Expenses & Payables
-        var expenses = await _context.ExpenseTransactions.ToListAsync(cancellationToken);
+        var expenses = await _context.ExpenseTransactions.AsNoTracking().ToListAsync(cancellationToken);
         var paidExpenses = expenses.Where(e => e.Status == "Paid").Sum(e => e.Amount + e.TaxAmount);
         var pendingPayables = expenses.Where(e => e.Status == "PendingApproval" || e.Status == "Approved").Sum(e => e.Amount + e.TaxAmount);
 
         // Payroll disbursements
-        var payrollRecords = await _context.PayrollRecords.ToListAsync(cancellationToken);
+        var payrollRecords = await _context.PayrollRecords.AsNoTracking().ToListAsync(cancellationToken);
         var disbursedPayroll = payrollRecords.Where(pr => pr.Status == "Disbursed").Sum(pr => pr.NetSalaryPayable);
 
         var totalExpenses = paidExpenses + disbursedPayroll;
         var netProfit = totalRevenue - totalExpenses;
 
         // 4. Claims Metrics
-        var claims = await _context.InsuranceClaims.ToListAsync(cancellationToken);
+        var claims = await _context.InsuranceClaims.AsNoTracking().ToListAsync(cancellationToken);
         var pendingClaims = claims.Where(c => c.Status == "Submitted" || c.Status == "InReview").ToList();
         var pendingClaimsCount = pendingClaims.Count;
         var pendingClaimsAmount = pendingClaims.Sum(c => c.ClaimAmount);
 
         // 5. Adjustments Metrics
         var pendingAdjustmentsCount = await _context.BillingAdjustments
+            .AsNoTracking()
             .CountAsync(a => a.Status == "PendingApproval", cancellationToken);
 
         // 6. Petty Cash
         var latestVoucher = await _context.PettyCashVouchers
+            .AsNoTracking()
             .OrderByDescending(v => v.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
         var pettyCashBalance = latestVoucher?.RemainingBalance ?? 500.00m;
 
         // 7. Unreconciled Receptionist Drawers
         var unreconciledDrawers = await _context.DailyCashReconciliations
+            .AsNoTracking()
             .CountAsync(r => string.IsNullOrEmpty(r.AuditStatus) || r.AuditStatus == "Pending", cancellationToken);
 
         // 8. Departmental Revenue breakdown
         var invoices = await _context.Invoices
+            .AsNoTracking()
             .Include(i => i.Payments)
             .Where(i => i.Payments.Any())
             .ToListAsync(cancellationToken);
 
         var deptRevenueList = invoices
             .GroupBy(i => string.IsNullOrWhiteSpace(i.Department) ? "General" : i.Department)
-            .Select(g => new DepartmentRevenueDto
+            .Select(g =>
             {
-                Department = g.Key,
-                Revenue = g.Sum(inv => inv.Payments.Sum(p => p.AmountPaid)),
-                InvoicesCount = g.Count(),
-                Percentage = totalRevenue > 0 ? (double)(g.Sum(inv => inv.Payments.Sum(p => p.AmountPaid)) / totalRevenue * 100m) : 0
+                var deptRevenue = g.Sum(inv => inv.Payments.Sum(p => p.AmountPaid));
+                return new DepartmentRevenueDto
+                {
+                    Department = g.Key,
+                    Revenue = deptRevenue,
+                    InvoicesCount = g.Count(),
+                    Percentage = totalRevenue > 0m ? Math.Round(deptRevenue / totalRevenue * 100m, 2) : 0m
+                };
             })
             .OrderByDescending(d => d.Revenue)
             .ToList();

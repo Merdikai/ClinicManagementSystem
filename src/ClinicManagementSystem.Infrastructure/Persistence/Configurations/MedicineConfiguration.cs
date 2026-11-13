@@ -47,5 +47,12 @@ public class MedicineConfiguration : IEntityTypeConfiguration<Medicine>
 
         builder.Property(m => m.UnitPrice)
             .HasPrecision(18, 2);
+
+        builder.HasQueryFilter(m => !m.IsDeleted);
+
+        builder.Property(m => m.RowVersion)
+            .IsRowVersion()
+            .HasColumnName("xmin")
+            .HasColumnType("xid");
     }
 }

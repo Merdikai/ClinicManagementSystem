@@ -1,20 +1,21 @@
 using ClinicManagementSystem.Application.Interfaces;
+using ClinicManagementSystem.Application.Options;
 using MailKit.Net.Smtp;
 using MailKit.Security;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MimeKit;
 
 namespace ClinicManagementSystem.Infrastructure.ExternalServices;
 
 public class EmailService : IEmailService
 {
-    private readonly IConfiguration _configuration;
+    private readonly EmailOptions _emailOptions;
     private readonly ILogger<EmailService> _logger;
 
-    public EmailService(IConfiguration configuration, ILogger<EmailService> logger)
+    public EmailService(IOptions<EmailOptions> emailOptions, ILogger<EmailService> logger)
     {
-        _configuration = configuration;
+        _emailOptions = emailOptions.Value;
         _logger = logger;
     }
 
@@ -22,17 +23,16 @@ public class EmailService : IEmailService
     {
         try
         {
-            var emailFrom = _configuration["Email:From"] ?? "clinic@example.com";
-            var smtpServer = _configuration["Email:SmtpServer"];
-            var portString = _configuration["Email:Port"];
-            var username = _configuration["Email:Username"];
-            var password = _configuration["Email:Password"];
+            var emailFrom = string.IsNullOrWhiteSpace(_emailOptions.From) ? "clinic@example.com" : _emailOptions.From;
+            var smtpServer = _emailOptions.SmtpServer;
+            var username = _emailOptions.Username;
+            var password = _emailOptions.Password;
 
-            if (string.IsNullOrEmpty(smtpServer) || 
-                string.IsNullOrEmpty(username) || 
+            if (string.IsNullOrEmpty(smtpServer) ||
+                string.IsNullOrEmpty(username) ||
                 string.IsNullOrEmpty(password) ||
-                username.Contains("your-email") ||
-                password.Contains("your-app-password"))
+                username.Contains("your-email", StringComparison.OrdinalIgnoreCase) ||
+                password.Contains("your-app-password", StringComparison.OrdinalIgnoreCase))
             {
                 _logger.LogInformation("[DEV EMAIL MOCK] To: {To} | Subject: {Subject} | Body length: {Length}", to, subject, body.Length);
                 return;
@@ -47,7 +47,7 @@ public class EmailService : IEmailService
             email.Body = builder.ToMessageBody();
 
             using var smtp = new SmtpClient();
-            var port = int.TryParse(portString, out var p) ? p : 587;
+            var port = _emailOptions.Port > 0 ? _emailOptions.Port : 587;
             await smtp.ConnectAsync(smtpServer, port, SecureSocketOptions.StartTls);
             await smtp.AuthenticateAsync(username, password);
             await smtp.SendAsync(email);

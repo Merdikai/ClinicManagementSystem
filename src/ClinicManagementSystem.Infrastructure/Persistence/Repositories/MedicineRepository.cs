@@ -14,15 +14,15 @@ public class MedicineRepository : IMedicineRepository
         _context = context;
     }
 
-    public async Task<Medicine?> GetByIdAsync(Guid id)
-        => await _context.Medicines.FindAsync(id);
+    public async Task<Medicine?> GetByIdAsync(Guid id, CancellationToken ct = default)
+        => await _context.Medicines.FindAsync([id], ct).ConfigureAwait(false);
 
-    public async Task<IEnumerable<Medicine>> GetAllAsync()
-        => await _context.Medicines.OrderBy(m => m.Name).ToListAsync();
+    public async Task<IEnumerable<Medicine>> GetAllAsync(CancellationToken ct = default)
+        => await _context.Medicines.AsNoTracking().OrderBy(m => m.Name).ToListAsync(ct).ConfigureAwait(false);
 
-    public async Task<(IEnumerable<Medicine> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, string? search, string? sortBy, bool descending)
+    public async Task<(IEnumerable<Medicine> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, string? search, string? sortBy, bool descending, CancellationToken ct = default)
     {
-        var query = _context.Medicines.AsQueryable();
+        var query = _context.Medicines.AsNoTracking().AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -33,8 +33,7 @@ public class MedicineRepository : IMedicineRepository
                 EF.Functions.ILike(m.Category, $"%{search}%"));
         }
 
-
-        var totalCount = await query.CountAsync();
+        var totalCount = await query.CountAsync(ct).ConfigureAwait(false);
 
         query = sortBy?.ToLower() switch
         {
@@ -47,37 +46,40 @@ public class MedicineRepository : IMedicineRepository
         var items = await query
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .ToListAsync();
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
 
         return (items, totalCount);
     }
 
-    public async Task AddAsync(Medicine medicine)
-        => await _context.Medicines.AddAsync(medicine);
+    public async Task AddAsync(Medicine medicine, CancellationToken ct = default)
+        => await _context.Medicines.AddAsync(medicine, ct).ConfigureAwait(false);
 
     public void Update(Medicine medicine)
         => _context.Medicines.Update(medicine);
 
-    public async Task BulkUpdatePricesAsync(Dictionary<Guid, decimal> priceUpdates)
+    public async Task BulkUpdatePricesAsync(Dictionary<Guid, decimal> priceUpdates, CancellationToken ct = default)
     {
         foreach (var (id, newPrice) in priceUpdates)
         {
             await _context.Medicines
                 .Where(m => m.Id == id)
-                .ExecuteUpdateAsync(setters => setters.SetProperty(m => m.UnitPrice, newPrice));
+                .ExecuteUpdateAsync(setters => setters.SetProperty(m => m.UnitPrice, newPrice), ct)
+                .ConfigureAwait(false);
         }
     }
 
-    public async Task BulkRestockAsync(Dictionary<Guid, int> restockQuantities)
+    public async Task BulkRestockAsync(Dictionary<Guid, int> restockQuantities, CancellationToken ct = default)
     {
         foreach (var (id, quantity) in restockQuantities)
         {
             await _context.Medicines
                 .Where(m => m.Id == id)
-                .ExecuteUpdateAsync(setters => setters.SetProperty(m => m.StockQuantity, m => m.StockQuantity + quantity));
+                .ExecuteUpdateAsync(setters => setters.SetProperty(m => m.StockQuantity, m => m.StockQuantity + quantity), ct)
+                .ConfigureAwait(false);
         }
     }
 
-    public async Task SaveChangesAsync()
-        => await _context.SaveChangesAsync();
+    public async Task SaveChangesAsync(CancellationToken ct = default)
+        => await _context.SaveChangesAsync(ct).ConfigureAwait(false);
 }

@@ -34,5 +34,12 @@ public class PrescriptionConfiguration : IEntityTypeConfiguration<Prescription>
             .WithMany()
             .HasForeignKey(p => p.InvoiceId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasQueryFilter(p => !p.IsDeleted && !p.Consultation.Appointment.IsDeleted && !p.Consultation.Appointment.Patient.IsDeleted);
+
+        builder.Property(p => p.RowVersion)
+            .IsRowVersion()
+            .HasColumnName("xmin")
+            .HasColumnType("xid");
     }
 }

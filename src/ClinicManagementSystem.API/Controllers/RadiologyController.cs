@@ -45,25 +45,30 @@ public class RadiologyController : ControllerBase
         [FromQuery] string? modality = null,
         [FromQuery] string? status = null,
         [FromQuery] string? priority = null,
-        [FromQuery] string? radiologistName = null)
+        [FromQuery] string? radiologistName = null,
+        CancellationToken ct = default)
     {
         // Patient Isolation Enforcement: Patients can ONLY view their own imaging orders
         if (User.IsInRole("Patient") && !_currentUserService.IsAdmin)
         {
-            var email = _currentUserService.Email;
-            var currentPatient = await _context.Patients.FirstOrDefaultAsync(p => p.Email == email);
-            if (currentPatient != null)
-            {
-                patientId = currentPatient.Id;
-            }
-            else if (patientId == null)
-            {
-                var fallbackPatient = await _context.Patients.FirstOrDefaultAsync(p => p.FirstName == "Alice");
-                if (fallbackPatient != null) patientId = fallbackPatient.Id;
-            }
+            var email = _currentUserService.Email
+                ?? User.FindFirst(ClaimTypes.Email)?.Value
+                ?? User.FindFirst("email")?.Value;
+
+            if (string.IsNullOrWhiteSpace(email))
+                return Ok(new List<RadiologyOrderDto>());
+
+            var currentPatient = await _context.Patients
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Email == email, ct);
+
+            if (currentPatient is null)
+                return Ok(new List<RadiologyOrderDto>());
+
+            patientId = currentPatient.Id;
         }
 
-        var result = await _sender.Send(new GetRadiologyOrdersQuery(doctorId, patientId, modality, status, priority, radiologistName));
+        var result = await _sender.Send(new GetRadiologyOrdersQuery(doctorId, patientId, modality, status, priority, radiologistName), ct);
         return Ok(result);
     }
 
@@ -72,18 +77,24 @@ public class RadiologyController : ControllerBase
     [EndpointSummary("Get detailed diagnostic imaging order and report by ID")]
     [ProducesResponseType(typeof(RadiologyOrderDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetOrderById(Guid id)
+    public async Task<IActionResult> GetOrderById(Guid id, CancellationToken ct)
     {
-        var result = await _sender.Send(new GetRadiologyOrderByIdQuery(id));
+        var result = await _sender.Send(new GetRadiologyOrderByIdQuery(id), ct);
         if (result == null)
             return NotFound(new ProblemDetails { Title = "Not Found", Detail = $"Radiology order '{id}' not found.", Status = 404 });
 
         // Patient Isolation Enforcement: Patient cannot access another patient's radiology order
         if (User.IsInRole("Patient") && !_currentUserService.IsAdmin)
         {
-            var email = _currentUserService.Email;
-            var currentPatient = await _context.Patients.FirstOrDefaultAsync(p => p.Email == email);
-            if (currentPatient != null && result.PatientId != currentPatient.Id)
+            var email = _currentUserService.Email
+                ?? User.FindFirst(ClaimTypes.Email)?.Value
+                ?? User.FindFirst("email")?.Value;
+
+            var currentPatient = !string.IsNullOrWhiteSpace(email)
+                ? await _context.Patients.AsNoTracking().FirstOrDefaultAsync(p => p.Email == email, ct)
+                : null;
+
+            if (currentPatient is null || result.PatientId != currentPatient.Id)
             {
                 return Forbid();
             }
@@ -123,9 +134,7 @@ public class RadiologyController : ControllerBase
 
         if (doctorId == Guid.Empty)
         {
-            var fallbackDoc = await _context.Users.FirstOrDefaultAsync(u => u.Username == "dr.smith");
-            if (fallbackDoc != null) doctorId = fallbackDoc.Id;
-            else return Unauthorized();
+            return Unauthorized(new ProblemDetails { Title = "Unauthorized", Detail = "Authenticated clinician identity is required.", Status = 401 });
         }
 
         var result = await _sender.Send(new CreateRadiologyOrderCommand(

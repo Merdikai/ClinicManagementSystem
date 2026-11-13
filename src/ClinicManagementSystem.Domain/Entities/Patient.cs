@@ -3,13 +3,32 @@ namespace ClinicManagementSystem.Domain.Entities;
 public class Patient
 {
     public Guid Id { get; set; } = Guid.NewGuid();
-    public string MedicalRecordNumber { get; set; } = string.Empty;
-    public string FirstName { get; set; } = string.Empty;
-    public string LastName { get; set; } = string.Empty;
+    public string MedicalRecordNumber
+    {
+        get;
+        set => field = value?.Trim() ?? string.Empty;
+    } = string.Empty;
+
+    public string FirstName
+    {
+        get;
+        set => field = value?.Trim() ?? string.Empty;
+    } = string.Empty;
+
+    public string LastName
+    {
+        get;
+        set => field = value?.Trim() ?? string.Empty;
+    } = string.Empty;
+
     public DateTime DateOfBirth { get; set; }
     public string Gender { get; set; } = string.Empty;
     public string Phone { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
+    public string Email
+    {
+        get;
+        set => field = value?.Trim() ?? string.Empty;
+    } = string.Empty;
     public string Address { get; set; } = string.Empty;
     public string BloodGroup { get; set; } = string.Empty;
     public string Allergies { get; set; } = string.Empty;
@@ -20,6 +39,10 @@ public class Patient
     public string? InsuranceCoveragePlan { get; set; }
     public string? InsuranceEligibilityStatus { get; set; } = "SelfPay";
     public DateTime RegisteredAt { get; set; } = DateTime.UtcNow;
+
+    public bool IsDeleted { get; set; } = false;
+    public DateTime? DeletedAt { get; set; }
+    public uint RowVersion { get; set; }
 
     public ICollection<MedicalRecord> MedicalRecords { get; set; } = new List<MedicalRecord>();
     public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();

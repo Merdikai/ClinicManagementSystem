@@ -21,5 +21,7 @@ public class InvoiceItemConfiguration : IEntityTypeConfiguration<InvoiceItem>
 
         // LineTotal is computed
         builder.Ignore(ii => ii.LineTotal);
+
+        builder.HasQueryFilter(ii => !ii.Invoice.IsDeleted && !ii.Invoice.Patient.IsDeleted);
     }
 }

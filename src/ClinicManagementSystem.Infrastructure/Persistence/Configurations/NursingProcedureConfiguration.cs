@@ -57,5 +57,7 @@ public class NursingProcedureConfiguration : IEntityTypeConfiguration<NursingPro
             .HasForeignKey(np => np.PerformedByUserId)
             .OnDelete(DeleteBehavior.Restrict)
             .IsRequired(false);
+
+        builder.HasQueryFilter(np => !np.Patient.IsDeleted);
     }
 }

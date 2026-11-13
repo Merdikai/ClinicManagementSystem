@@ -20,5 +20,9 @@ public class Prescription
     public Guid? InvoiceId { get; set; }
     public Invoice? Invoice { get; set; }
 
+    public bool IsDeleted { get; set; } = false;
+    public DateTime? DeletedAt { get; set; }
+    public uint RowVersion { get; set; }
+
     public ICollection<PrescriptionItem> PrescriptionItems { get; set; } = new List<PrescriptionItem>();
 }

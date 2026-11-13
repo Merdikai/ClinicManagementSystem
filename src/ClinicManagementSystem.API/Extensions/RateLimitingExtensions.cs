@@ -2,24 +2,94 @@ using ClinicManagementSystem.API.Constants;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
+using System.Text.Json;
 using System.Threading.RateLimiting;
 
 namespace ClinicManagementSystem.API.Extensions;
 
 public static class RateLimitingExtensions
 {
+    public const string LoginPartitionItemKey = "LoginPartitionKey";
+
+    public static IApplicationBuilder UseLoginRateLimitPartitioning(this IApplicationBuilder app)
+    {
+        return app.Use(async (context, next) =>
+        {
+            if (HttpMethods.IsPost(context.Request.Method) &&
+                context.Request.Path.Value?.EndsWith("/auth/login", StringComparison.OrdinalIgnoreCase) == true &&
+                context.Request.ContentType?.Contains("application/json", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                context.Request.EnableBuffering();
+                try
+                {
+                    using var doc = await JsonDocument.ParseAsync(context.Request.Body, cancellationToken: context.RequestAborted);
+                    if (doc.RootElement.ValueKind == JsonValueKind.Object)
+                    {
+                        foreach (var prop in doc.RootElement.EnumerateObject())
+                        {
+                            if (string.Equals(prop.Name, "username", StringComparison.OrdinalIgnoreCase) &&
+                                prop.Value.ValueKind == JsonValueKind.String)
+                            {
+                                var username = prop.Value.GetString()?.Trim().ToLowerInvariant();
+                                if (!string.IsNullOrEmpty(username))
+                                {
+                                    var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                                    context.Items[LoginPartitionItemKey] = $"login:{ip}:{username}";
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                    // Ignore malformed JSON; model binding/FluentValidation will return 400.
+                }
+                finally
+                {
+                    context.Request.Body.Position = 0;
+                }
+            }
+
+            await next();
+        });
+    }
+
     public static IServiceCollection AddCustomRateLimiting(this IServiceCollection services)
     {
         services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
-            // ─── Qiyas M11 Session 3: Dedicated Login Rate Limit Policy ───
-            options.AddFixedWindowLimiter("LoginPolicy", opt =>
+            // ─── Partitioned by (IP, Username) so sequential multi-role logins work while blocking brute-force ───
+            options.AddPolicy("LoginPolicy", httpContext =>
             {
-                opt.PermitLimit = 5;
-                opt.Window = TimeSpan.FromMinutes(1);
-                opt.QueueLimit = 0;
+                var partitionKey = httpContext.Items[LoginPartitionItemKey] as string
+                    ?? $"login:{httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown"}";
+
+                return RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: partitionKey,
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 8,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0,
+                        AutoReplenishment = true
+                    });
+            });
+
+            options.AddPolicy("RefreshPolicy", httpContext =>
+            {
+                var partitionKey = $"refresh:{httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown"}";
+                return RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: partitionKey,
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 20,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0,
+                        AutoReplenishment = true
+                    });
             });
 
             // ─── Anonymous Policy (No Authentication) ───
@@ -93,9 +163,21 @@ public static class RateLimitingExtensions
             options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(
                 httpContext =>
                 {
-                    var role = httpContext.User.FindFirst(ClaimTypes.Role)?.Value 
+                    var path = httpContext.Request.Path;
+                    // Auth endpoints enforce dedicated partitioned LoginPolicy/RefreshPolicy; docs & health stay unrestricted
+                    if (path.StartsWithSegments("/health") ||
+                        path.StartsWithSegments("/openapi") ||
+                        path.StartsWithSegments("/scalar") ||
+                        path.Value?.EndsWith("/auth/login", StringComparison.OrdinalIgnoreCase) == true ||
+                        path.Value?.EndsWith("/auth/refresh", StringComparison.OrdinalIgnoreCase) == true ||
+                        path.Value?.EndsWith("/auth/register", StringComparison.OrdinalIgnoreCase) == true)
+                    {
+                        return RateLimitPartition.GetNoLimiter("bypass-global");
+                    }
+
+                    var role = httpContext.User.FindFirst(ClaimTypes.Role)?.Value
                         ?? httpContext.User.FindFirst("role")?.Value
-                        ?? httpContext.User.FindFirst("http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.Value 
+                        ?? httpContext.User.FindFirst("http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.Value
                         ?? "anonymous";
                     var partitionKey = httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? httpContext.Connection.RemoteIpAddress?.ToString() ?? "anonymous";
 
@@ -104,7 +186,7 @@ public static class RateLimitingExtensions
                         var (tokenLimit, windowSeconds) = role.ToLower() switch
                         {
                             "admin" => (RateLimitingConstants.AdminLimit, RateLimitingConstants.AdminWindowSeconds),
-                            "doctor" or "nurse" or "receptionist" or "pharmacist" or "labtechnician" or "lab-technician" or "radiologist" or "accountant" 
+                            "doctor" or "nurse" or "receptionist" or "pharmacist" or "labtechnician" or "lab-technician" or "radiologist" or "accountant"
                                 => (RateLimitingConstants.StaffLimit, RateLimitingConstants.StaffWindowSeconds),
                             "patient" => (RateLimitingConstants.PatientLimit, RateLimitingConstants.PatientWindowSeconds),
                             _ => (RateLimitingConstants.AnonymousLimit, RateLimitingConstants.AnonymousWindowSeconds)
@@ -128,7 +210,7 @@ public static class RateLimitingExtensions
                 var retryAfter = "10";
                 if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var ts))
                 {
-                    retryAfter = ((int)ts.TotalSeconds).ToString();
+                    retryAfter = Math.Max(1, (int)ts.TotalSeconds).ToString();
                 }
 
                 context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;

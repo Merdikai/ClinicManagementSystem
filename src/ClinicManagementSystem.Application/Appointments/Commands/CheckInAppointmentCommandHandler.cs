@@ -8,6 +8,7 @@ using ClinicManagementSystem.Domain.Enums;
 using ClinicManagementSystem.Domain.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid;
 
 namespace ClinicManagementSystem.Application.Appointments.Commands;
 
@@ -16,15 +17,18 @@ public class CheckInAppointmentCommandHandler : IRequestHandler<CheckInAppointme
     private readonly IClinicDbContext _context;
     private readonly IMapper _mapper;
     private readonly INotificationService _notificationService;
+    private readonly HybridCache? _cache;
 
     public CheckInAppointmentCommandHandler(
         IClinicDbContext context,
         IMapper mapper,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        HybridCache? cache = null)
     {
         _context = context;
         _mapper = mapper;
         _notificationService = notificationService;
+        _cache = cache;
     }
 
     public async Task<Result<AppointmentResponseDto>> Handle(CheckInAppointmentCommand request, CancellationToken cancellationToken)
@@ -70,6 +74,16 @@ public class CheckInAppointmentCommandHandler : IRequestHandler<CheckInAppointme
 
         appointment.Status = AppointmentStatus.CheckedIn;
         await _context.SaveChangesAsync(cancellationToken);
+
+        if (_cache is not null)
+        {
+            try
+            {
+                await _cache.RemoveByTagAsync("appointments", cancellationToken);
+                await _cache.RemoveAsync($"appointment_v1:{request.Id}", cancellationToken);
+            }
+            catch { }
+        }
 
         // Notify doctor that patient is ready
         try

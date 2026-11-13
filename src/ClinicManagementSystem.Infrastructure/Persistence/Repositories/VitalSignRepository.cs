@@ -14,13 +14,15 @@ public class VitalSignRepository : IVitalSignRepository
         _context = context;
     }
 
-    public async Task<VitalSign?> GetByAppointmentIdAsync(Guid appointmentId)
+    public async Task<VitalSign?> GetByAppointmentIdAsync(Guid appointmentId, CancellationToken ct = default)
         => await _context.VitalSigns
-            .FirstOrDefaultAsync(vs => vs.AppointmentId == appointmentId);
+            .AsNoTracking()
+            .FirstOrDefaultAsync(vs => vs.AppointmentId == appointmentId, ct)
+            .ConfigureAwait(false);
 
-    public async Task AddAsync(VitalSign vitalSign)
-        => await _context.VitalSigns.AddAsync(vitalSign);
+    public async Task AddAsync(VitalSign vitalSign, CancellationToken ct = default)
+        => await _context.VitalSigns.AddAsync(vitalSign, ct).ConfigureAwait(false);
 
-    public async Task SaveChangesAsync()
-        => await _context.SaveChangesAsync();
+    public async Task SaveChangesAsync(CancellationToken ct = default)
+        => await _context.SaveChangesAsync(ct).ConfigureAwait(false);
 }

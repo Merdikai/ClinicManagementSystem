@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Asp.Versioning;
 using ClinicManagementSystem.API.Constants;
+using ClinicManagementSystem.API.Filters;
 using ClinicManagementSystem.Application.Permissions.Commands;
 using ClinicManagementSystem.Application.Permissions.DTOs;
 using ClinicManagementSystem.Application.Permissions.Queries;
@@ -29,6 +30,7 @@ public class PermissionsController : ControllerBase
     }
 
     [HttpGet]
+    [ETagFilter]
     [EndpointSummary("Get fine-grained PBAC permissions matrix for all or a specific role")]
     [ProducesResponseType(typeof(List<RolePermissionMatrixDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetRolePermissions([FromQuery] string? roleName = null)
@@ -38,6 +40,7 @@ public class PermissionsController : ControllerBase
     }
 
     [HttpPut]
+    [AuditAction("RolePermission", "Updated")]
     [EndpointSummary("Update granted permissions for a specific role")]
     [ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]
     public async Task<IActionResult> UpdateRolePermissions([FromBody] UpdateRolePermissionsDto dto)

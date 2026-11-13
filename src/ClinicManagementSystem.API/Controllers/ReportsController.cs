@@ -1,4 +1,7 @@
+using System.Security.Claims;
+using System.Text.Json;
 using Asp.Versioning;
+using ClinicManagementSystem.API.Filters;
 using ClinicManagementSystem.Application.DTOs;
 using ClinicManagementSystem.Application.Extensions;
 using ClinicManagementSystem.Application.Reports.DTOs;
@@ -13,7 +16,7 @@ namespace ClinicManagementSystem.API.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/reports")]
-[Authorize]
+[Authorize(Roles = "Admin,Doctor,Nurse,Receptionist,Pharmacist,LabTechnician,Radiologist,Accountant")]
 public class ReportsController : ControllerBase
 {
     private readonly ISender _sender;
@@ -67,32 +70,37 @@ public class ReportsController : ControllerBase
         return Ok(shaped);
     }
 
-    // ─── Qiyas M7 Session 2: Background Worker with 202 Accepted & Status Polling ───
+    // ─── Bounded Channel Background Worker (202 Accepted + Poll + Download + SignalR Push) ───
     [HttpPost("async-summary")]
     [EndpointSummary("Queue background report generation and return 202 Accepted")]
     [ProducesResponseType(StatusCodes.Status202Accepted)]
-    public async Task<IActionResult> RequestAsyncReport([FromBody] AsyncReportRequestDto request, CancellationToken ct)
+    public async Task<IActionResult> RequestAsyncReport([FromBody] AsyncReportRequestDto? request, CancellationToken ct)
     {
         var jobId = Guid.NewGuid().ToString("N")[..8];
         var username = User.Identity?.Name ?? "Anonymous";
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        var payload = request ?? new AsyncReportRequestDto();
 
         var job = new AsyncReportJob(
             jobId,
-            request.ReportType ?? "ClinicalExecutiveSummary",
+            payload.ReportType ?? "ClinicalExecutiveSummary",
             username,
             DateTime.UtcNow,
-            System.Text.Json.JsonSerializer.Serialize(request)
+            JsonSerializer.Serialize(payload),
+            userId
         );
 
         await _reportQueue.EnqueueAsync(job, ct);
 
-        var statusUrl = Url.Action(nameof(GetAsyncReportStatus), new { jobId });
+        var statusUrl = Url.Action(nameof(GetAsyncReportStatus), new { version = "1.0", jobId });
+        var downloadUrl = Url.Action(nameof(DownloadAsyncReport), new { version = "1.0", jobId });
 
         return Accepted(statusUrl, new
         {
             JobId = jobId,
             Status = "Queued",
             StatusUrl = statusUrl,
+            DownloadUrl = downloadUrl,
             Message = "Report generation has been queued for background processing."
         });
     }
@@ -115,8 +123,40 @@ public class ReportsController : ControllerBase
         return Ok(status);
     }
 
+    [HttpGet("download/{jobId}", Name = nameof(DownloadAsyncReport))]
+    [EndpointSummary("Download completed asynchronous background report artifact")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public IActionResult DownloadAsyncReport(string jobId)
+    {
+        var artifact = _reportQueue.GetArtifact(jobId);
+        if (artifact is null)
+        {
+            var status = _reportQueue.GetStatus(jobId);
+            if (status is not null && status.Status is "Queued" or "Processing")
+            {
+                return Conflict(new ProblemDetails
+                {
+                    Title = "Report Still Generating",
+                    Detail = $"Background report '{jobId}' is currently {status.Status}. Retry shortly.",
+                    Status = StatusCodes.Status409Conflict
+                });
+            }
+
+            return NotFound(new ProblemDetails
+            {
+                Title = "Report Artifact Not Found",
+                Detail = $"No completed report artifact exists for job '{jobId}'.",
+                Status = StatusCodes.Status404NotFound
+            });
+        }
+
+        return File(artifact.Content, artifact.ContentType, artifact.FileName);
+    }
+
     [HttpGet("export/patients")]
     [Authorize(Roles = "Admin,Accountant,Receptionist,Doctor,Nurse")]
+    [AuditAction("Report", "ExportedPatientsCsv")]
     [EndpointSummary("Export patients to Excel CSV with optional timeframe")]
     public async Task<IActionResult> ExportPatients([FromQuery] DateTime? startDate = null, [FromQuery] DateTime? endDate = null, [FromQuery] string? timeframe = null)
     {
@@ -127,6 +167,7 @@ public class ReportsController : ControllerBase
 
     [HttpGet("export/invoices")]
     [Authorize(Roles = "Admin,Accountant,Receptionist")]
+    [AuditAction("Report", "ExportedInvoicesCsv")]
     [EndpointSummary("Export invoices to Excel CSV with optional timeframe")]
     public async Task<IActionResult> ExportInvoices([FromQuery] DateTime? startDate = null, [FromQuery] DateTime? endDate = null, [FromQuery] string? timeframe = null)
     {

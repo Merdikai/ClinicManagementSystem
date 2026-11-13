@@ -59,5 +59,7 @@ public class InsuranceClaimConfiguration : IEntityTypeConfiguration<InsuranceCla
             .WithMany()
             .HasForeignKey(c => c.PatientId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasQueryFilter(c => !c.Patient.IsDeleted && !c.Invoice.IsDeleted && !c.Invoice.Patient.IsDeleted);
     }
 }

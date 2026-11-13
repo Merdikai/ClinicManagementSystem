@@ -16,7 +16,7 @@ public class AuthResponseDto
 }
 
 public record UserResponseDto(Guid Id, string Username, string Email, string FirstName, string LastName, string? PhoneNumber);
-public record RefreshTokenDto(string RefreshToken);
-public record LogoutDto(string RefreshToken);
+public record RefreshTokenDto(string? RefreshToken = null);
+public record LogoutDto(string? RefreshToken = null);
 public record ForgotPasswordDto(string Email);
 public record ResetPasswordDto(string Token, string NewPassword);

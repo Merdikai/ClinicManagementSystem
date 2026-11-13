@@ -127,6 +127,9 @@ Desktop.ini
 *.bak
 scratch/
 swagger-*.txt
+node_modules/
+TestResults/
+*.trx
 
 # ==========================================
 # Documentation & Screenshots (Tracked)

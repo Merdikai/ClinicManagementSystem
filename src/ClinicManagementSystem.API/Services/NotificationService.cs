@@ -127,4 +127,26 @@ public class NotificationService : INotificationService
 
         await _hubContext.Clients.All.DutyRosterChanged(payload);
     }
+
+    public async Task NotifyReportReadyAsync(string? userId, string jobId, string reportType, string downloadUrl)
+    {
+        var payload = new
+        {
+            JobId = jobId,
+            ReportType = reportType,
+            Status = "Completed",
+            DownloadUrl = downloadUrl,
+            Timestamp = DateTime.UtcNow,
+            Message = $"Background report '{reportType}' ({jobId}) is ready for download."
+        };
+
+        if (!string.IsNullOrWhiteSpace(userId))
+        {
+            await _hubContext.Clients.Group($"user-{userId}").ReportReady(payload);
+        }
+        else
+        {
+            await _hubContext.Clients.Group("Admin").ReportReady(payload);
+        }
+    }
 }

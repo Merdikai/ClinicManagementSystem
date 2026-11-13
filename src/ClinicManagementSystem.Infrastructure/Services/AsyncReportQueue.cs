@@ -6,14 +6,18 @@ namespace ClinicManagementSystem.Infrastructure.Services;
 
 public class AsyncReportQueue : IAsyncReportQueue
 {
+    public const int MaxQueuedReports = 50;
+
     private readonly Channel<AsyncReportJob> _channel;
     private readonly ConcurrentDictionary<string, AsyncReportStatus> _statuses = new();
+    private readonly ConcurrentDictionary<string, AsyncReportArtifact> _artifacts = new();
 
     public AsyncReportQueue()
     {
-        // Unbounded channel for high-throughput in-memory queueing
-        _channel = Channel.CreateUnbounded<AsyncReportJob>(new UnboundedChannelOptions
+        // Bounded channel prevents memory exhaustion under spike traffic by applying backpressure
+        _channel = Channel.CreateBounded<AsyncReportJob>(new BoundedChannelOptions(MaxQueuedReports)
         {
+            FullMode = BoundedChannelFullMode.Wait,
             SingleReader = false,
             SingleWriter = false
         });
@@ -28,7 +32,7 @@ public class AsyncReportQueue : IAsyncReportQueue
             job.QueuedAt
         );
 
-        await _channel.Writer.WriteAsync(job, cancellationToken);
+        await _channel.Writer.WriteAsync(job, cancellationToken).ConfigureAwait(false);
     }
 
     public IAsyncEnumerable<AsyncReportJob> ReadAllAsync(CancellationToken cancellationToken = default)
@@ -55,5 +59,14 @@ public class AsyncReportQueue : IAsyncReportQueue
     {
         return _statuses.TryGetValue(jobId, out var status) ? status : null;
     }
-}
 
+    public void SaveArtifact(string jobId, byte[] content, string contentType, string fileName)
+    {
+        _artifacts[jobId] = new AsyncReportArtifact(content, contentType, fileName);
+    }
+
+    public AsyncReportArtifact? GetArtifact(string jobId)
+    {
+        return _artifacts.TryGetValue(jobId, out var artifact) ? artifact : null;
+    }
+}

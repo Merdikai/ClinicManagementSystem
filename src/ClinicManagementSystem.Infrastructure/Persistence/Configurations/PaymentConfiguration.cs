@@ -21,5 +21,7 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
 
         builder.Property(p => p.TransactionReference)
             .HasMaxLength(100);
+
+        builder.HasQueryFilter(p => !p.Invoice.IsDeleted && !p.Invoice.Patient.IsDeleted);
     }
 }

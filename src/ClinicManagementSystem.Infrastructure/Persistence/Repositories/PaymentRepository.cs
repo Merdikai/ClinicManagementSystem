@@ -13,9 +13,9 @@ public class PaymentRepository : IPaymentRepository
         _context = context;
     }
 
-    public async Task AddAsync(Payment payment)
-        => await _context.Payments.AddAsync(payment);
+    public async Task AddAsync(Payment payment, CancellationToken ct = default)
+        => await _context.Payments.AddAsync(payment, ct).ConfigureAwait(false);
 
-    public async Task SaveChangesAsync()
-        => await _context.SaveChangesAsync();
+    public async Task SaveChangesAsync(CancellationToken ct = default)
+        => await _context.SaveChangesAsync(ct).ConfigureAwait(false);
 }

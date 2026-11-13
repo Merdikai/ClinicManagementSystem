@@ -9,4 +9,10 @@ public class ConflictException : Exception
     {
         ConflictReason = conflictReason;
     }
+
+    public ConflictException(string message, Exception innerException, string conflictReason = "conflict")
+        : base(message, innerException)
+    {
+        ConflictReason = conflictReason;
+    }
 }

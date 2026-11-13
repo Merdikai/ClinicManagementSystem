@@ -55,5 +55,7 @@ public class PharmacyStockRequisitionConfiguration : IEntityTypeConfiguration<Ph
             .WithMany()
             .HasForeignKey(r => r.ApprovedByUserId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasQueryFilter(r => !r.Medicine.IsDeleted);
     }
 }

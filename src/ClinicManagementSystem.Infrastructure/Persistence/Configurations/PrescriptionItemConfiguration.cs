@@ -26,5 +26,7 @@ public class PrescriptionItemConfiguration : IEntityTypeConfiguration<Prescripti
         // UnitPrice is decimal – set globally in DbContext
         // TotalPrice is computed, not mapped
         builder.Ignore(pi => pi.TotalPrice);
+
+        builder.HasQueryFilter(pi => !pi.Medicine.IsDeleted && !pi.Prescription.IsDeleted && !pi.Prescription.Consultation.Appointment.IsDeleted && !pi.Prescription.Consultation.Appointment.Patient.IsDeleted);
     }
 }

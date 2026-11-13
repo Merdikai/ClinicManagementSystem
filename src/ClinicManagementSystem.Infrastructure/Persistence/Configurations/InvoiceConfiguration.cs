@@ -35,5 +35,12 @@ public class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
         // All monetary fields are decimal – set globally
         // BalanceDue is computed, not mapped
         builder.Ignore(i => i.BalanceDue);
+
+        builder.HasQueryFilter(i => !i.IsDeleted && !i.Patient.IsDeleted);
+
+        builder.Property(i => i.RowVersion)
+            .IsRowVersion()
+            .HasColumnName("xmin")
+            .HasColumnType("xid");
     }
 }

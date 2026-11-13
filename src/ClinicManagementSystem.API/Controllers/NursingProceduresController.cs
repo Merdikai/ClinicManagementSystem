@@ -1,17 +1,12 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Security.Claims;
-using System.Threading.Tasks;
 using Asp.Versioning;
-using AutoMapper;
+using ClinicManagementSystem.Application.Common;
 using ClinicManagementSystem.Application.DTOs;
 using ClinicManagementSystem.Application.Interfaces;
-using ClinicManagementSystem.Domain.Entities;
+using ClinicManagementSystem.Application.NursingProcedures;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace ClinicManagementSystem.API.Controllers;
 
@@ -19,20 +14,15 @@ namespace ClinicManagementSystem.API.Controllers;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/nursing-procedures")]
 [Tags("Nursing Procedures")]
-[Authorize]
+[Authorize(Roles = "Nurse,Doctor,Admin")]
 public class NursingProceduresController : ControllerBase
 {
-    private readonly IClinicDbContext _context;
-    private readonly IMapper _mapper;
+    private readonly ISender _sender;
     private readonly ICurrentUserService _currentUserService;
 
-    public NursingProceduresController(
-        IClinicDbContext context,
-        IMapper mapper,
-        ICurrentUserService currentUserService)
+    public NursingProceduresController(ISender sender, ICurrentUserService currentUserService)
     {
-        _context = context;
-        _mapper = mapper;
+        _sender = sender;
         _currentUserService = currentUserService;
     }
 
@@ -43,42 +33,10 @@ public class NursingProceduresController : ControllerBase
         [FromQuery] Guid? patientId = null,
         [FromQuery] Guid? appointmentId = null,
         [FromQuery] DateTime? date = null,
-        [FromQuery] string? status = null)
+        [FromQuery] string? status = null,
+        CancellationToken ct = default)
     {
-        var query = _context.NursingProcedures
-            .Include(p => p.Patient)
-            .Include(p => p.PerformedByUser)
-            .Include(p => p.OrderedByDoctor)
-            .AsNoTracking()
-            .AsQueryable();
-
-        if (patientId.HasValue && patientId.Value != Guid.Empty)
-        {
-            query = query.Where(p => p.PatientId == patientId.Value);
-        }
-
-        if (appointmentId.HasValue && appointmentId.Value != Guid.Empty)
-        {
-            query = query.Where(p => p.AppointmentId == appointmentId.Value);
-        }
-
-        if (!string.IsNullOrWhiteSpace(status))
-        {
-            query = query.Where(p => p.Status == status);
-        }
-
-        if (date.HasValue)
-        {
-            var start = date.Value.Date;
-            var end = start.AddDays(1);
-            query = query.Where(p => (p.PerformedAt.HasValue && p.PerformedAt.Value >= start && p.PerformedAt.Value < end) || (p.OrderedAt >= start && p.OrderedAt < end));
-        }
-
-        var items = await query
-            .OrderByDescending(p => p.OrderedAt)
-            .ToListAsync();
-
-        var dtos = _mapper.Map<IEnumerable<NursingProcedureResponseDto>>(items);
+        var dtos = await _sender.Send(new GetNursingProceduresQuery(patientId, appointmentId, date, status), ct);
         return Ok(dtos);
     }
 
@@ -86,21 +44,15 @@ public class NursingProceduresController : ControllerBase
     [EndpointSummary("Get a nursing procedure by ID")]
     [ProducesResponseType(typeof(NursingProcedureResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetById(Guid id)
+    public async Task<IActionResult> GetById(Guid id, CancellationToken ct = default)
     {
-        var item = await _context.NursingProcedures
-            .Include(p => p.Patient)
-            .Include(p => p.PerformedByUser)
-            .Include(p => p.OrderedByDoctor)
-            .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Id == id);
-
-        if (item == null)
+        var dto = await _sender.Send(new GetNursingProcedureByIdQuery(id), ct);
+        if (dto == null)
         {
             return NotFound(new ProblemDetails { Title = "Not Found", Detail = $"Nursing procedure {id} not found.", Status = 404 });
         }
 
-        return Ok(_mapper.Map<NursingProcedureResponseDto>(item));
+        return Ok(dto);
     }
 
     [HttpPost]
@@ -108,7 +60,7 @@ public class NursingProceduresController : ControllerBase
     [EndpointSummary("Record a direct nursing procedure performed immediately")]
     [ProducesResponseType(typeof(NursingProcedureResponseDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Create([FromBody] CreateNursingProcedureDto dto)
+    public async Task<IActionResult> Create([FromBody] CreateNursingProcedureDto dto, CancellationToken ct = default)
     {
         if (dto.PatientId == Guid.Empty)
         {
@@ -119,57 +71,28 @@ public class NursingProceduresController : ControllerBase
         if (performerId == Guid.Empty)
         {
             var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (Guid.TryParse(claim, out var parsedClaim))
+            if (!Guid.TryParse(claim, out var parsedClaim))
             {
-                performerId = parsedClaim;
+                return Unauthorized(new ProblemDetails { Title = "Unauthorized", Detail = "Authenticated clinician identity is required.", Status = 401 });
             }
-            else
-            {
-                var fallback = await _context.Users.FirstOrDefaultAsync();
-                if (fallback != null) performerId = fallback.Id;
-            }
+            performerId = parsedClaim;
         }
 
-        var procedure = new NursingProcedure
-        {
-            Id = Guid.NewGuid(),
-            PatientId = dto.PatientId,
-            AppointmentId = dto.AppointmentId,
-            PerformedByUserId = performerId,
-            ProcedureType = dto.ProcedureType,
-            BodySite = dto.BodySite ?? string.Empty,
-            Notes = dto.Notes ?? string.Empty,
-            PatientTolerance = dto.PatientTolerance ?? "Well Tolerated",
-            SuppliesUsed = dto.SuppliesUsed ?? string.Empty,
-            Status = "Completed",
-            Priority = "Routine",
-            OrderedAt = DateTime.UtcNow,
-            PerformedAt = dto.PerformedAt ?? DateTime.UtcNow,
-            Price = 30.00m
-        };
+        var result = await _sender.Send(new CreateNursingProcedureCommand(
+            dto.PatientId,
+            dto.AppointmentId,
+            performerId,
+            dto.ProcedureType,
+            dto.BodySite,
+            dto.Notes,
+            dto.PatientTolerance,
+            dto.SuppliesUsed,
+            dto.PerformedAt), ct);
 
-        _context.NursingProcedures.Add(procedure);
-
-        if (dto.AppointmentId.HasValue && dto.AppointmentId.Value != Guid.Empty)
-        {
-            var appointment = await _context.Appointments.FindAsync(dto.AppointmentId.Value);
-            if (appointment != null && (appointment.Status == Domain.Enums.AppointmentStatus.CheckedIn || appointment.Status == Domain.Enums.AppointmentStatus.TriageComplete))
-            {
-                appointment.Status = Domain.Enums.AppointmentStatus.InProcedure;
-            }
-        }
-
-        await _context.SaveChangesAsync();
-
-        var created = await _context.NursingProcedures
-            .Include(p => p.Patient)
-            .Include(p => p.PerformedByUser)
-            .Include(p => p.OrderedByDoctor)
-            .AsNoTracking()
-            .FirstAsync(p => p.Id == procedure.Id);
-
-        var resultDto = _mapper.Map<NursingProcedureResponseDto>(created);
-        return CreatedAtAction(nameof(GetById), new { id = procedure.Id }, resultDto);
+        return result.Match<IActionResult>(
+            onSuccess: created => CreatedAtAction(nameof(GetById), new { id = created.Id }, created),
+            onFailure: (error, _) => BadRequest(new ProblemDetails { Title = "Procedure Creation Failed", Detail = error, Status = 400 })
+        );
     }
 
     [HttpPost("orders")]
@@ -177,7 +100,7 @@ public class NursingProceduresController : ControllerBase
     [EndpointSummary("Place an in-clinic nursing procedure order (by Doctor or Clinician)")]
     [ProducesResponseType(typeof(NursingProcedureResponseDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> OrderProcedure([FromBody] OrderNursingProcedureRequestDto dto)
+    public async Task<IActionResult> OrderProcedure([FromBody] OrderNursingProcedureRequestDto dto, CancellationToken ct = default)
     {
         if (dto.PatientId == Guid.Empty)
         {
@@ -185,44 +108,25 @@ public class NursingProceduresController : ControllerBase
         }
 
         Guid doctorId = _currentUserService.UserId ?? Guid.Empty;
-        if (doctorId == Guid.Empty)
+        if (doctorId == Guid.Empty && Guid.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var parsedClaim))
         {
-            var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (Guid.TryParse(claim, out var parsedClaim))
-            {
-                doctorId = parsedClaim;
-            }
+            doctorId = parsedClaim;
         }
 
-        var procedure = new NursingProcedure
-        {
-            Id = Guid.NewGuid(),
-            PatientId = dto.PatientId,
-            AppointmentId = dto.AppointmentId,
-            OrderedByDoctorId = doctorId != Guid.Empty ? doctorId : null,
-            ProcedureType = dto.ProcedureType,
-            BodySite = dto.BodySite ?? string.Empty,
-            Notes = dto.Notes ?? string.Empty,
-            PatientTolerance = "Pending Procedure",
-            SuppliesUsed = string.Empty,
-            Status = "Ordered",
-            Priority = string.IsNullOrWhiteSpace(dto.Priority) ? "Routine" : dto.Priority,
-            Price = dto.Price > 0 ? dto.Price : 30.00m,
-            OrderedAt = DateTime.UtcNow
-        };
+        var result = await _sender.Send(new OrderNursingProcedureCommand(
+            dto.PatientId,
+            dto.AppointmentId,
+            doctorId != Guid.Empty ? doctorId : null,
+            dto.ProcedureType,
+            dto.BodySite,
+            dto.Notes,
+            dto.Priority,
+            dto.Price), ct);
 
-        _context.NursingProcedures.Add(procedure);
-        await _context.SaveChangesAsync();
-
-        var created = await _context.NursingProcedures
-            .Include(p => p.Patient)
-            .Include(p => p.PerformedByUser)
-            .Include(p => p.OrderedByDoctor)
-            .AsNoTracking()
-            .FirstAsync(p => p.Id == procedure.Id);
-
-        var resultDto = _mapper.Map<NursingProcedureResponseDto>(created);
-        return CreatedAtAction(nameof(GetById), new { id = procedure.Id }, resultDto);
+        return result.Match<IActionResult>(
+            onSuccess: created => CreatedAtAction(nameof(GetById), new { id = created.Id }, created),
+            onFailure: (error, _) => BadRequest(new ProblemDetails { Title = "Order Creation Failed", Detail = error, Status = 400 })
+        );
     }
 
     [HttpPost("{id:guid}/complete")]
@@ -230,61 +134,29 @@ public class NursingProceduresController : ControllerBase
     [EndpointSummary("Fulfill and complete an ordered nursing procedure (by Nurse)")]
     [ProducesResponseType(typeof(NursingProcedureResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> CompleteProcedure(Guid id, [FromBody] CompleteNursingProcedureRequestDto dto)
+    public async Task<IActionResult> CompleteProcedure(Guid id, [FromBody] CompleteNursingProcedureRequestDto dto, CancellationToken ct = default)
     {
-        var procedure = await _context.NursingProcedures
-            .Include(p => p.Patient)
-            .Include(p => p.OrderedByDoctor)
-            .FirstOrDefaultAsync(p => p.Id == id);
-
-        if (procedure == null)
-        {
-            return NotFound(new ProblemDetails { Title = "Not Found", Detail = $"Nursing procedure {id} not found.", Status = 404 });
-        }
-
         Guid nurseId = _currentUserService.UserId ?? Guid.Empty;
         if (nurseId == Guid.Empty)
         {
             var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (Guid.TryParse(claim, out var parsedClaim))
+            if (!Guid.TryParse(claim, out var parsedClaim))
             {
-                nurseId = parsedClaim;
+                return Unauthorized(new ProblemDetails { Title = "Unauthorized", Detail = "Authenticated clinician identity is required.", Status = 401 });
             }
-            else
-            {
-                var fallback = await _context.Users.FirstOrDefaultAsync();
-                if (fallback != null) nurseId = fallback.Id;
-            }
+            nurseId = parsedClaim;
         }
 
-        procedure.PerformedByUserId = nurseId;
-        procedure.PerformedAt = DateTime.UtcNow;
-        procedure.Status = "Completed";
-        if (!string.IsNullOrWhiteSpace(dto.PatientTolerance))
-        {
-            procedure.PatientTolerance = dto.PatientTolerance;
-        }
-        if (!string.IsNullOrWhiteSpace(dto.SuppliesUsed))
-        {
-            procedure.SuppliesUsed = dto.SuppliesUsed;
-        }
-        if (!string.IsNullOrWhiteSpace(dto.Notes))
-        {
-            procedure.Notes = string.IsNullOrWhiteSpace(procedure.Notes)
-                ? dto.Notes
-                : $"{procedure.Notes} | Nurse completion note: {dto.Notes}";
-        }
+        var result = await _sender.Send(new CompleteNursingProcedureCommand(
+            id,
+            nurseId,
+            dto.PatientTolerance,
+            dto.SuppliesUsed,
+            dto.Notes), ct);
 
-        await _context.SaveChangesAsync();
-
-        var completed = await _context.NursingProcedures
-            .Include(p => p.Patient)
-            .Include(p => p.PerformedByUser)
-            .Include(p => p.OrderedByDoctor)
-            .AsNoTracking()
-            .FirstAsync(p => p.Id == procedure.Id);
-
-        var resultDto = _mapper.Map<NursingProcedureResponseDto>(completed);
-        return Ok(resultDto);
+        return result.Match<IActionResult>(
+            onSuccess: completed => Ok(completed),
+            onFailure: (error, _) => NotFound(new ProblemDetails { Title = "Not Found", Detail = error, Status = 404 })
+        );
     }
 }

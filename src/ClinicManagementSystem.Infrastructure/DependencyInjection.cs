@@ -1,4 +1,4 @@
-﻿using ClinicManagementSystem.Application.Interfaces;
+using ClinicManagementSystem.Application.Interfaces;
 using ClinicManagementSystem.Domain.Interfaces;
 using ClinicManagementSystem.Infrastructure.Identity;
 using ClinicManagementSystem.Infrastructure.ExternalServices;
@@ -31,6 +31,10 @@ public static class DependencyInjection
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IPdfService, PdfService>();
+        services.AddHttpClient<IInsuranceVerificationClient, HttpInsuranceVerificationClient>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(10);
+        }).AddStandardResilienceHandler();
 
         return services;
     }

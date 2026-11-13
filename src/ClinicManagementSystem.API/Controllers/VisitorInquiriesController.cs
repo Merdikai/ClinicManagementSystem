@@ -20,7 +20,7 @@ namespace ClinicManagementSystem.API.Controllers;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/visitor-inquiries")]
 [Tags("Visitor Inquiries")]
-[Authorize]
+[Authorize(Roles = "Admin,Receptionist,Nurse,Doctor")]
 public class VisitorInquiriesController : ControllerBase
 {
     private readonly ISender _sender;
@@ -98,15 +98,11 @@ public class VisitorInquiriesController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(emailClaim))
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == emailClaim);
+            var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Email == emailClaim);
             if (user != null) return user.Id;
         }
 
-        var receptionistUser = await _context.Users.FirstOrDefaultAsync(u => u.Email.Contains("receptionist"));
-        if (receptionistUser != null) return receptionistUser.Id;
-
-        var anyUser = await _context.Users.FirstOrDefaultAsync();
-        return anyUser?.Id ?? Guid.NewGuid();
+        throw new UnauthorizedAccessException("Authenticated user identity could not be resolved.");
     }
 }
 

@@ -35,7 +35,7 @@ public class AppointmentConfiguration : IEntityTypeConfiguration<Appointment>
         builder.Property(a => a.ReasonForVisit)
             .HasMaxLength(500);
 
-        builder.HasQueryFilter(a => !a.IsDeleted);
+        builder.HasQueryFilter(a => !a.IsDeleted && !a.Patient.IsDeleted);
 
         builder.Property(a => a.RowVersion)
             .IsRowVersion()
