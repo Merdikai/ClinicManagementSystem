@@ -1,5 +1,10 @@
 # ==========================================
-# .NET & Build Output
+# MediFlow Enterprise - Backend Git Ignore
+# .NET 10 | ASP.NET Core | PostgreSQL | EF Core
+# ==========================================
+
+# ==========================================
+# 1. .NET & Compiler Build Output
 # ==========================================
 [Bb]in/
 [Oo]bj/
@@ -17,70 +22,89 @@ bld/
 *.userosscache
 *.sln.docstates
 *.userprefs
+*.dmp
+*.dump
+*.crash
+
+# BenchmarkDotNet artifacts
+BenchmarkDotNet.Artifacts/
 
 # ==========================================
-# IDEs and Editors
+# 2. IDEs and Editors
 # ==========================================
 # Visual Studio
 .vs/
-# Rider
+*.sln.iml
+
+# JetBrains Rider & ReSharper
 .idea/
-# VS Code
+_ReSharper*/
+*.DotSettings.user
+
+# Visual Studio Code
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
 !.vscode/mcp.json
+
+# General Editors & Backups
 *.swp
 *.*~
 .history/
+*.orig
 
 # ==========================================
-# Sensitive Configuration & Environment
+# 3. Sensitive Configuration & Environment Secrets
 # ==========================================
-# Protect credentials and runtime connection strings
+# Protect runtime credentials and connection strings
 **/appsettings.json
 **/appsettings.*.json
 !**/appsettings.template.json
 !**/appsettings.*.template.json
 secrets.json
 
-# Environment variables
+# Environment variables & secrets
 .env
 *.env
+.env.*
 !.env.example
 
 # ==========================================
-# Security & Certificates
+# 4. Security Certificates & Private Keys
 # ==========================================
 *.pfx
 *.p12
 *.pem
 *.crt
 *.key
+*.cer
 
 # ==========================================
-# Local Storage & Database Files
+# 5. Local Storage, Media & Database Files
 # ==========================================
 *.sqlite
+*.sqlite3
 *.db
 *.db-shm
 *.db-wal
 postgres_data/
 src/ClinicManagementSystem.API/uploads/
 uploads/
+storage/
 
 # ==========================================
-# Frontend Repository Junction
+# 6. Frontend Repository Junction
 # ==========================================
-# clinic-client is managed in its own repository (Merdikai/Clinic-client)
+# clinic-client is independently versioned in its own repository (Merdikai/Clinic-client)
 clinic-client/
 
 # ==========================================
-# NuGet Packages & Caches
+# 7. NuGet Packages & Caches
 # ==========================================
 *.nupkg
+*.snupkg
 **/[Pp]ackages/*
 !**/[Pp]ackages/build/
 *.nuget.props
@@ -89,27 +113,29 @@ project.lock.json
 project.fragment.lock.json
 
 # ==========================================
-# Test Results & Code Coverage
+# 8. Test Results, Code Coverage & Profiling
 # ==========================================
 TestResults/
 *.trx
 *.coverage
+*.coveragexml
 coverage/
+*.lcov
 
 # ==========================================
-# Logging
+# 9. Logging & Diagnostics
 # ==========================================
 logs/
 *.log
 
 # ==========================================
-# Docker
+# 10. Containerization & Docker
 # ==========================================
 .docker/
 docker-compose.override.yml
 
 # ==========================================
-# Operating System Files
+# 11. Operating System Files
 # ==========================================
 .DS_Store
 .DS_Store?
@@ -121,18 +147,18 @@ Thumbs.db
 Desktop.ini
 
 # ==========================================
-# Temporary, Dump & Scratch Files
+# 12. Temporary & Scratch Files
 # ==========================================
 *.tmp
 *.bak
 scratch/
 swagger-*.txt
 node_modules/
-TestResults/
-*.trx
 
 # ==========================================
-# Documentation & Screenshots (Tracked)
+# 13. Documentation & Media Assets (Tracked)
 # ==========================================
 !screenshots/
 !screenshots/**
+!docs/
+!docs/**
