@@ -12,7 +12,7 @@ public class SpecificationsTests
     public void LowStockMedicinesSpecification_Criteria_ShouldFilterActiveAndBelowReorder()
     {
         var spec = new LowStockMedicinesSpecification();
-        var filter = spec.Criteria.Compile();
+        var filter = spec.Criteria!.Compile();
 
         var lowStock = new Medicine { IsActive = true, StockQuantity = 5, ReorderLevel = 10 };
         var ampleStock = new Medicine { IsActive = true, StockQuantity = 50, ReorderLevel = 10 };
@@ -28,7 +28,7 @@ public class SpecificationsTests
     {
         var doctorId = Guid.NewGuid();
         var spec = new ActiveAppointmentsSpecification(doctorId);
-        var filter = spec.Criteria.Compile();
+        var filter = spec.Criteria!.Compile();
 
         var matchingScheduled = new Appointment { DoctorId = doctorId, Status = AppointmentStatus.Scheduled };
         var matchingCheckedIn = new Appointment { DoctorId = doctorId, Status = AppointmentStatus.CheckedIn };
@@ -45,7 +45,7 @@ public class SpecificationsTests
     public void PendingLabOrdersSpecification_Criteria_ShouldExcludeCompletedAndCancelled()
     {
         var spec = new PendingLabOrdersSpecification();
-        var filter = spec.Criteria.Compile();
+        var filter = spec.Criteria!.Compile();
 
         var ordered = new LabOrder { Status = LabOrderStatus.Ordered };
         var inProgress = new LabOrder { Status = LabOrderStatus.InProgress };
@@ -62,7 +62,7 @@ public class SpecificationsTests
     public void PendingRadiologyOrdersSpecification_Criteria_ShouldExcludeCompletedAndCancelled()
     {
         var spec = new PendingRadiologyOrdersSpecification();
-        var filter = spec.Criteria.Compile();
+        var filter = spec.Criteria!.Compile();
 
         var ordered = new RadiologyOrder { Status = "Ordered" };
         var inProgress = new RadiologyOrder { Status = "InProgress" };
